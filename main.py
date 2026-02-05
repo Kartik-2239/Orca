@@ -2,8 +2,10 @@ import re
 import sys
 from pathlib import Path
 
-from PySide6.QtCore import QProcess, Qt
-from PySide6.QtGui import QFont
+from PySide6.QtCore import QProcess, Qt, QUrl
+from PySide6.QtGui import QFont, QPainterPath, QRegion
+from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
+from PySide6.QtMultimediaWidgets import QVideoWidget
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -21,6 +23,7 @@ from PySide6.QtWidgets import (
     QSizePolicy,
     QSpacerItem,
     QScrollArea,
+    QSlider,
     QStyle,
     QVBoxLayout,
     QWidget,
@@ -34,11 +37,25 @@ def human_path(path: Path) -> str:
         return str(path)
 
 
+class RoundedFrame(QFrame):
+    def __init__(self, radius: int = 24, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self._radius = radius
+        self.setAttribute(Qt.WA_StyledBackground, True)
+
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        path = QPainterPath()
+        rect = self.rect()
+        path.addRoundedRect(rect, self._radius, self._radius)
+        self.setMask(QRegion(path.toFillPolygon().toPolygon()))
+
+
 class VideoDownloader(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
-        self.setWindowTitle("Lightweight Video Downloader")
-        self.setMinimumSize(980, 640)
+        self.setWindowTitle("Video downloader")
+        self.setMinimumSize(860, 600)
 
         self.base_dir = Path(__file__).parent
         self.default_downloads = self.base_dir / "downloads"
@@ -85,9 +102,6 @@ class VideoDownloader(QMainWindow):
         header_row.addWidget(header_title)
         header_row.addStretch(1)
 
-        subtitle = QLabel("Paste a URL, pick a folder, and download with yt-dlp + ffmpeg.")
-        subtitle.setWordWrap(True)
-        subtitle.setObjectName("SubtitleLabel")
 
         url_label = QLabel("VIDEO LINK")
         url_label.setObjectName("SectionLabel")
@@ -196,25 +210,14 @@ class VideoDownloader(QMainWindow):
         tweak_layout.addWidget(self.filename_input)
 
         action_row = QHBoxLayout()
+        action_row.setContentsMargins(0, 0, 0, 0)
         self.download_btn = QPushButton("Download")
         self.download_btn.setObjectName("PrimaryButton")
         self.download_btn.clicked.connect(self._start_download)
-        self.cancel_btn = QPushButton("Cancel")
-        self.cancel_btn.setObjectName("GhostButton")
-        self.cancel_btn.clicked.connect(self._cancel_download)
-        self.cancel_btn.setEnabled(False)
-        action_row.addWidget(self.download_btn)
-        action_row.addWidget(self.cancel_btn)
-        action_row.addItem(QSpacerItem(20, 20))
-
-        self.progress = QProgressBar()
-        self.progress.setRange(0, 100)
-        self.progress.setValue(0)
-        self.progress.setFormat("Ready")
+        action_row.addWidget(self.download_btn, 1)
 
         self.status = QLabel("")
-        self.status.setWordWrap(True)
-        self.status.setStyleSheet("color: #2a2a2a;")
+        self.status.setVisible(False)
 
         left_content = QWidget(left)
         left_content.setObjectName("LeftPanel")
@@ -227,7 +230,6 @@ class VideoDownloader(QMainWindow):
 
         left_content_layout.addLayout(header_row)
         left_content_layout.addWidget(divider)
-        left_content_layout.addWidget(subtitle)
         left_content_layout.addWidget(url_label)
         left_content_layout.addWidget(self.url_input)
         left_content_layout.addWidget(save_label)
@@ -236,8 +238,6 @@ class VideoDownloader(QMainWindow):
         left_content_layout.addLayout(name_row)
         left_content_layout.addWidget(tweak_group)
         left_content_layout.addLayout(action_row)
-        left_content_layout.addWidget(self.progress)
-        left_content_layout.addWidget(self.status)
         left_content_layout.addStretch(1)
 
         scroll = QScrollArea()
@@ -248,7 +248,99 @@ class VideoDownloader(QMainWindow):
 
         left_layout.addWidget(scroll)
 
-        card_layout.addWidget(left, 1)
+        right = QWidget(card)
+        right.setObjectName("RightPanel")
+        right_layout = QVBoxLayout(right)
+        right_layout.setSpacing(14)
+
+        preview_title = QLabel("Preview")
+        preview_title.setObjectName("PreviewTitle")
+
+        self.video_widget = QVideoWidget()
+        self.video_widget.setMinimumSize(160, 260)
+        self.video_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.video_widget.setStyleSheet("")
+
+        self.player = QMediaPlayer(self)
+        self.audio_output = QAudioOutput(self)
+        self.audio_output.setVolume(0.6)
+        self.player.setAudioOutput(self.audio_output)
+        self.player.setVideoOutput(self.video_widget)
+        self.player.errorOccurred.connect(self._on_player_error)
+        self.player.mediaStatusChanged.connect(self._on_media_status)
+        self.player.playbackStateChanged.connect(self._sync_play_button)
+        self.player.positionChanged.connect(self._sync_position)
+        self.player.durationChanged.connect(self._sync_duration)
+
+        self.preview_label = QLabel("Preview area")
+        self.preview_label.setAlignment(Qt.AlignCenter)
+        self.preview_label.setObjectName("PreviewLabel")
+
+        phone_frame = RoundedFrame(radius=24)
+        phone_frame.setObjectName("PhoneFrame")
+        phone_frame.setMinimumSize(160, 260)
+        phone_frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        phone_layout = QVBoxLayout(phone_frame)
+        phone_layout.setContentsMargins(8, 8, 8, 8)
+        phone_layout.addWidget(self.video_widget)
+
+        preview_card = QWidget()
+        preview_card.setObjectName("PreviewCard")
+        preview_card_layout = QVBoxLayout(preview_card)
+        preview_card_layout.setContentsMargins(16, 16, 16, 16)
+        preview_card_layout.setSpacing(10)
+        preview_card_layout.addWidget(phone_frame, 1)
+        preview_card_layout.addWidget(self.preview_label)
+
+        controls_card = QWidget()
+        controls_card.setObjectName("ControlsCard")
+        controls_layout = QVBoxLayout(controls_card)
+        controls_layout.setContentsMargins(16, 12, 16, 12)
+        controls_layout.setSpacing(8)
+
+        time_row = QHBoxLayout()
+        self.current_time = QLabel("00:00")
+        self.current_time.setObjectName("TimeLabel")
+        self.total_time = QLabel("00:00")
+        self.total_time.setObjectName("TimeLabel")
+        time_row.addWidget(self.current_time)
+        time_row.addStretch(1)
+        time_row.addWidget(self.total_time)
+
+        self.position_slider = QSlider(Qt.Horizontal)
+        self.position_slider.setRange(0, 0)
+        self.position_slider.setObjectName("SeekSlider")
+        self.position_slider.sliderMoved.connect(self.player.setPosition)
+
+        controls_row = QHBoxLayout()
+        self.play_btn = QPushButton("Play")
+        self.play_btn.setObjectName("ControlButton")
+        self.play_btn.clicked.connect(self._toggle_play)
+        self.mute_btn = QPushButton("Mute")
+        self.mute_btn.setObjectName("ControlButton")
+        self.mute_btn.setCheckable(True)
+        self.mute_btn.toggled.connect(self._toggle_mute)
+        self.volume_slider = QSlider(Qt.Horizontal)
+        self.volume_slider.setRange(0, 100)
+        self.volume_slider.setValue(60)
+        self.volume_slider.setObjectName("VolumeSlider")
+        self.volume_slider.valueChanged.connect(self._set_volume)
+        controls_row.addWidget(self.play_btn)
+        controls_row.addWidget(self.mute_btn)
+        controls_row.addStretch(1)
+        controls_row.addWidget(self.volume_slider, 2)
+
+        controls_layout.addWidget(self.position_slider)
+        controls_layout.addLayout(time_row)
+        controls_layout.addLayout(controls_row)
+
+        right_layout.addWidget(preview_title)
+        right_layout.addWidget(preview_card, 1)
+        right_layout.addWidget(controls_card)
+        right_layout.addStretch(1)
+
+        card_layout.addWidget(left, 5)
+        card_layout.addWidget(right, 4)
         root_layout.addWidget(card)
 
         self.setCentralWidget(root)
@@ -378,13 +470,18 @@ class VideoDownloader(QMainWindow):
             args += ["--merge-output-format", container]
 
 
+        if "x.com/" in url or "twitter.com/" in url:
+            args += ["--socket-timeout", "30", "--retries", "10", "--fragment-retries", "10", "--ignore-errors"]
+
         args.append(url)
 
         self._set_running(True)
-        self.progress.setValue(0)
-        self.progress.setFormat("Downloading...")
         self.status.setText(f"Saving to {human_path(target_folder)}")
         self._set_status_color(error=False)
+        if hasattr(self, "preview_label"):
+            self.preview_label.setText("Downloading... preview will update when ready.")
+        if hasattr(self, "player"):
+            self.player.stop()
 
         self.process.start("yt-dlp", args)
 
@@ -392,14 +489,11 @@ class VideoDownloader(QMainWindow):
         if self.process.state() != QProcess.NotRunning:
             self.process.kill()
         self._set_running(False)
-        self.progress.setValue(0)
-        self.progress.setFormat("Cancelled")
         self.status.setText("Download cancelled.")
         self._set_status_color(error=True)
 
     def _set_running(self, running: bool) -> None:
         self.download_btn.setEnabled(not running)
-        self.cancel_btn.setEnabled(running)
         self.url_input.setEnabled(not running)
         self.subfolder_combo.setEnabled(not running)
 
@@ -417,8 +511,6 @@ class VideoDownloader(QMainWindow):
             value = int(float(match.group(1)))
             if value != self._last_progress:
                 self._last_progress = value
-                self.progress.setValue(value)
-                self.progress.setFormat(f"{value}%")
             return
 
         if "Destination:" in line or "Merging formats into" in line:
@@ -431,28 +523,97 @@ class VideoDownloader(QMainWindow):
 
     def _on_process_error(self) -> None:
         self._set_running(False)
-        self.progress.setValue(0)
-        self.progress.setFormat("Error")
         self.status.setText("Failed to start yt-dlp. Is it installed and on PATH?")
         self._set_status_color(error=True)
 
     def _on_process_finished(self, exit_code: int, _status: QProcess.ExitStatus) -> None:
         self._set_running(False)
         if exit_code != 0:
-            self.progress.setFormat("Failed")
             detail = self._last_info_line or "Download failed. Check the URL or yt-dlp output."
             self.status.setText(detail)
             self._set_status_color(error=True)
             return
 
-        self.progress.setValue(100)
-        self.progress.setFormat("Done")
         self.status.setText("Download complete.")
         self._set_status_color(error=False)
+
+        latest = self._find_latest_video()
+        if latest:
+            self._load_preview(latest)
+        else:
+            if hasattr(self, "preview_label"):
+                self.preview_label.setText("Download complete, but no playable file found.")
+
+    def _find_latest_video(self) -> Path | None:
+        if not self._current_output_path or not self._current_output_path.exists():
+            return None
+        candidates = list(self._current_output_path.glob("*.mp4"))
+        if not candidates:
+            return None
+        return max(candidates, key=lambda p: p.stat().st_mtime)
+
+    def _load_preview(self, path: Path) -> None:
+        if not path.exists():
+            self.preview_label.setText("Video file not found.")
+            return
+        self.preview_label.setText("")
+        url = QUrl.fromLocalFile(str(path))
+        self.player.setSource(url)
+        self.player.play()
 
     def _set_status_color(self, error: bool) -> None:
         color = "#b00020" if error else "#2a2a2a"
         self.status.setStyleSheet(f"color: {color};")
+
+    def _toggle_play(self) -> None:
+        if self.player.playbackState() == QMediaPlayer.PlayingState:
+            self.player.pause()
+        else:
+            self.player.play()
+
+    def _sync_play_button(self) -> None:
+        if self.player.playbackState() == QMediaPlayer.PlayingState:
+            self.play_btn.setText("Pause")
+        else:
+            self.play_btn.setText("Play")
+
+    def _sync_position(self, position: int) -> None:
+        if not self.position_slider.isSliderDown():
+            self.position_slider.setValue(position)
+        self.current_time.setText(self._format_time(position))
+
+    def _sync_duration(self, duration: int) -> None:
+        self.position_slider.setRange(0, duration)
+        self.total_time.setText(self._format_time(duration))
+
+    def _toggle_mute(self, checked: bool) -> None:
+        self.audio_output.setMuted(checked)
+        self.mute_btn.setText("Muted" if checked else "Mute")
+
+    def _set_volume(self, value: int) -> None:
+        self.audio_output.setVolume(value / 100)
+
+    def _format_time(self, ms: int) -> str:
+        total_seconds = max(0, ms // 1000)
+        minutes = total_seconds // 60
+        seconds = total_seconds % 60
+        return f"{minutes:02d}:{seconds:02d}"
+
+    def _on_player_error(self, error: QMediaPlayer.Error, error_string: str) -> None:
+        if error == QMediaPlayer.NoError:
+            return
+        message = error_string or "Playback error."
+        self.preview_label.setText(message)
+        self.status.setText(message)
+        self._set_status_color(error=True)
+
+    def _on_media_status(self, status: QMediaPlayer.MediaStatus) -> None:
+        if status == QMediaPlayer.LoadingMedia:
+            self.preview_label.setText("Loading video...")
+        elif status == QMediaPlayer.BufferingMedia:
+            self.preview_label.setText("Buffering...")
+        elif status in (QMediaPlayer.LoadedMedia, QMediaPlayer.BufferedMedia):
+            self.preview_label.setText("")
 
 
     def _apply_styles(self) -> None:
@@ -465,9 +626,16 @@ class VideoDownloader(QMainWindow):
                 border-radius: 28px;
             }
             QWidget#LeftPanel { background: #ffffff; }
+            QWidget#RightPanel {
+                background: #ffffff;
+                border-left: 0px;
+            }
             QLabel { color: #1f2430; }
             QLabel#HeaderTitle { font-size: 18px; font-weight: 700; }
             QLabel#SubtitleLabel { color: #8a8f9c; }
+            QLabel#PreviewTitle { font-size: 14px; font-weight: 700; }
+            QLabel#PreviewLabel { color: #7c8190; font-size: 11px; }
+            QLabel#TimeLabel { color: #8a8f9c; font-size: 11px; }
             QLabel#SectionLabel {
                 color: #f05aa6;
                 font-weight: 700;
@@ -512,8 +680,9 @@ class VideoDownloader(QMainWindow):
                 background: #f01d85;
                 color: #ffffff;
                 border: none;
-                min-height: 54px;
+                min-height: 43px;
                 font-size: 14px;
+                padding: 6px 12px;
             }
             QPushButton#GhostButton {
                 background: #ffffff;
@@ -536,6 +705,50 @@ class VideoDownloader(QMainWindow):
                 background: #ffffff;
                 border: 1px solid #f1d7e6;
                 border-radius: 18px;
+            }
+            QWidget#PreviewCard {
+                background: #ffffff;
+                border: 1px solid #f1d7e6;
+                border-radius: 26px;
+            }
+            QWidget#ControlsCard {
+                background: #ffffff;
+                border: 1px solid #f1d7e6;
+                border-radius: 18px;
+            }
+            QWidget#PhoneFrame {
+                background: transparent;
+                border-radius: 24px;
+            }
+            QPushButton#ControlButton {
+                background: #ffffff;
+                color: #1f2430;
+                border: 1px solid #f1d7e6;
+                border-radius: 12px;
+                min-height: 36px;
+                padding: 6px 12px;
+            }
+            QSlider#SeekSlider::groove:horizontal {
+                height: 6px;
+                background: #f3e6ee;
+                border-radius: 3px;
+            }
+            QSlider#SeekSlider::handle:horizontal {
+                width: 14px;
+                margin: -6px 0;
+                border-radius: 7px;
+                background: #f01d85;
+            }
+            QSlider#VolumeSlider::groove:horizontal {
+                height: 4px;
+                background: #f3e6ee;
+                border-radius: 2px;
+            }
+            QSlider#VolumeSlider::handle:horizontal {
+                width: 12px;
+                margin: -5px 0;
+                border-radius: 6px;
+                background: #f58abf;
             }
             """
         )
