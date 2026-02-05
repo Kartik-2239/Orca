@@ -1,3 +1,4 @@
+import os
 import re
 import sys
 from pathlib import Path
@@ -75,9 +76,12 @@ class VideoDownloader(QMainWindow):
 
         self.process = QProcess(self)
         self.process.setProcessChannelMode(QProcess.MergedChannels)
-        self.process.readyReadStandardOutput.connect(self._on_process_output)
+        self.process.readyRead.connect(lambda: self.process.readAll())
+        self.process.finished.connect(self.process.deleteLater)
         self.process.finished.connect(self._on_process_finished)
         self.process.errorOccurred.connect(self._on_process_error)
+        # self.process.start(program, arguments)
+
 
         self._current_output_path: Path | None = None
         self._last_progress = 0
@@ -229,6 +233,8 @@ class VideoDownloader(QMainWindow):
         action_row.addWidget(self.download_btn, 1)
 
         self.status = QLabel("")
+        self.status.setObjectName("StatusLabel")
+        self.status.setWordWrap(True)
         self.status.setVisible(False)
 
         left_content = QWidget(left)
@@ -250,6 +256,7 @@ class VideoDownloader(QMainWindow):
         left_content_layout.addLayout(name_row)
         left_content_layout.addWidget(tweak_group)
         left_content_layout.addLayout(action_row)
+        left_content_layout.addWidget(self.status)
         left_content_layout.addStretch(1)
 
         scroll = QScrollArea()
@@ -541,19 +548,29 @@ class VideoDownloader(QMainWindow):
 
         self._set_running(True)
         self.status.setText(f"Saving to {human_path(target_folder)}")
+        self.status.setVisible(True)
         self._set_status_color(error=False)
         if hasattr(self, "preview_label"):
             self.preview_label.setText("Downloading... preview will update when ready.")
         if hasattr(self, "player"):
             self.player.stop()
 
-        self.process.start("yt-dlp", args)
+        self.process.start(self._yt_dlp_cmd(), args)
+
+    def _yt_dlp_cmd(self) -> str:
+        if hasattr(sys, "_MEIPASS"):
+            base = Path(getattr(sys, "_MEIPASS"))
+            bundled = base / "yt-dlp"
+            if bundled.exists():
+                return str(bundled)
+        return "yt-dlp"
 
     def _cancel_download(self) -> None:
         if self.process.state() != QProcess.NotRunning:
             self.process.kill()
         self._set_running(False)
         self.status.setText("Download cancelled.")
+        self.status.setVisible(True)
         self._set_status_color(error=True)
 
     def _set_running(self, running: bool) -> None:
@@ -588,6 +605,7 @@ class VideoDownloader(QMainWindow):
     def _on_process_error(self) -> None:
         self._set_running(False)
         self.status.setText("Failed to start yt-dlp. Is it installed and on PATH?")
+        self.status.setVisible(True)
         self._set_status_color(error=True)
 
     def _on_process_finished(self, exit_code: int, _status: QProcess.ExitStatus) -> None:
@@ -595,10 +613,12 @@ class VideoDownloader(QMainWindow):
         if exit_code != 0:
             detail = self._last_info_line or "Download failed. Check the URL or yt-dlp output."
             self.status.setText(detail)
+            self.status.setVisible(True)
             self._set_status_color(error=True)
             return
 
         self.status.setText("Download complete.")
+        self.status.setVisible(True)
         self._set_status_color(error=False)
 
         latest = self._find_latest_video()
@@ -628,6 +648,7 @@ class VideoDownloader(QMainWindow):
     def _set_status_color(self, error: bool) -> None:
         color = "#b00020" if error else "#2a2a2a"
         self.status.setStyleSheet(f"color: {color};")
+        self.status.setVisible(True)
 
     def _toggle_play(self) -> None:
         if self.player.playbackState() == QMediaPlayer.PlayingState:
@@ -698,6 +719,7 @@ class VideoDownloader(QMainWindow):
                 QLabel#PreviewTitle { font-size: 14px; font-weight: 700; }
                 QLabel#PreviewLabel { color: #b690a5; font-size: 11px; }
                 QLabel#TimeLabel { color: #b690a5; font-size: 11px; }
+                QLabel#StatusLabel { color: #f7c6de; font-size: 11px; }
                 QToolButton#ThemeToggle {
                     background: #26161f;
                     border: 1px solid #38212b;
@@ -827,6 +849,7 @@ class VideoDownloader(QMainWindow):
                 QLabel#PreviewTitle { font-size: 14px; font-weight: 700; }
                 QLabel#PreviewLabel { color: #7c8190; font-size: 11px; }
                 QLabel#TimeLabel { color: #8a8f9c; font-size: 11px; }
+                QLabel#StatusLabel { color: #d14c7a; font-size: 11px; }
                 QToolButton#ThemeToggle {
                     background: #ffffff;
                     border: 1px solid #f1d7e6;

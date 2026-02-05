@@ -1,6 +1,6 @@
 # Video Downloader (made by codex)
 
-Lightweight PySide6 app that downloads videos with `yt-dlp` + `ffmpeg` and previews them inside the UI.
+PySide6 app that downloads videos with `yt-dlp` + `ffmpeg` and previews them inside the UI.
 
 ## Requirements
 
@@ -18,8 +18,14 @@ python main.py
 ## Build (macOS)
 
 ```bash
-pyinstaller --noconfirm --windowed --name "VideoDownloader" main.py
+pyinstaller --noconfirm --windowed --name "VideoDownloader" \
+  --add-binary "/path/to/yt-dlp:." \
+  --add-binary "/path/to/ffmpeg:." \
+  --add-binary "/path/to/ffprobe:." \
+  main.py
 ```
+
+**Note:** Change `/opt/homebrew/bin/` to your actual path where `yt-dlp`, `ffmpeg`, and `ffprobe` are installed.
 
 ## Notes
 
