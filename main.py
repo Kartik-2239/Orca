@@ -6,6 +6,7 @@ from PySide6.QtWidgets import QApplication, QMainWindow, QStackedWidget
 from services.state import AppState, ensure_storage, load_state, save_state
 from ui.download_page import DownloadPage
 from ui.home_page import HomePage
+from ui.image_editor_page import ImageEditorPage
 from ui.player_page import PlayerPage
 
 
@@ -40,10 +41,12 @@ class MainWindow(QMainWindow):
         self.home_page = HomePage(self.state, self.set_theme, self.show_page)
         self.download_page = DownloadPage(self.state, self.set_theme, self.show_page)
         self.player_page = PlayerPage(self.state, self.set_theme, self.show_page)
+        self.image_editor_page = ImageEditorPage(self.state, self.set_theme, self.show_page)
 
         self.stack.addWidget(self.home_page)
         self.stack.addWidget(self.download_page)
         self.stack.addWidget(self.player_page)
+        self.stack.addWidget(self.image_editor_page)
 
         self.setCentralWidget(self.stack)
         self.apply_theme(self.state.theme)
@@ -55,6 +58,8 @@ class MainWindow(QMainWindow):
             self.stack.setCurrentWidget(self.download_page)
         elif page == "player":
             self.stack.setCurrentWidget(self.player_page)
+        elif page == "image_editor":
+            self.stack.setCurrentWidget(self.image_editor_page)
         else:
             self.stack.setCurrentWidget(self.home_page)
         self.state.last_page = page
@@ -169,6 +174,139 @@ class MainWindow(QMainWindow):
                     border: 1px solid #3b2730;
                     border-radius: 18px;
                 }
+                QFrame#EditorCanvas {
+                    background: #160e13;
+                    border: 1px solid #3b2730;
+                    border-radius: 18px;
+                }
+                QFrame#EditorOptions {
+                    background: #1c141a;
+                    border: 1px solid #3b2730;
+                    border-radius: 16px;
+                }
+                QFrame#EditorPanel QPushButton {
+                    min-height: 32px;
+                    padding: 4px 10px;
+                }
+                QFrame#EditorPanel QPushButton#PrimaryButton {
+                    min-height: 36px;
+                }
+                QFrame#EditorPanel QPushButton#ToolButton {
+                    min-height: 30px;
+                    padding: 4px 8px;
+                }
+                QFrame#EditorPanel QLineEdit,
+                QFrame#EditorPanel QComboBox,
+                QFrame#EditorPanel QSpinBox {
+                    min-height: 36px;
+                }
+                QFrame#LayerRow {
+                    background: #22161f;
+                    border: 1px solid #3b2730;
+                    border-radius: 12px;
+                }
+                QFrame#LayerRow[active="true"] {
+                    border: 1px solid #5b2138;
+                    background: #2a1b22;
+                }
+                QFrame#LayerRow[hidden="true"] {
+                    background: #1a1117;
+                    border: 1px solid #2a1b22;
+                }
+                QLabel#LayerBadge {
+                    background: #2a1b22;
+                    color: #f7c6de;
+                    border-radius: 10px;
+                    min-width: 34px;
+                    min-height: 28px;
+                    font-weight: 700;
+                    qproperty-alignment: 'AlignCenter';
+                }
+                QToolButton#LayerEye,
+                QToolButton#LayerLock,
+                QToolButton#LayerAdd {
+                    background: #160e13;
+                    border: 1px solid #3b2730;
+                    border-radius: 8px;
+                    min-width: 24px;
+                    min-height: 24px;
+                    padding: 0px;
+                }
+                QToolButton#LockRatioButton {
+                    background: #160e13;
+                    border: 1px solid #3b2730;
+                    border-radius: 10px;
+                    min-width: 28px;
+                    min-height: 28px;
+                    padding: 0px;
+                }
+                QToolButton#LayerArrow {
+                    background: #160e13;
+                    border: 1px solid #3b2730;
+                    border-radius: 8px;
+                    min-width: 22px;
+                    min-height: 22px;
+                    padding: 0px;
+                }
+                QScrollArea#EditorScroll { background: transparent; border: none; }
+                QScrollArea#EditorScroll QWidget { background: transparent; }
+                QScrollArea#LayersScroll { background: transparent; border: none; }
+                QScrollArea#LayersScroll QWidget { background: transparent; }
+                QScrollBar:vertical {
+                    background: transparent;
+                    width: 8px;
+                    margin: 2px 0 2px 0;
+                }
+                QScrollBar::handle:vertical {
+                    background: #3b2730;
+                    border-radius: 4px;
+                    min-height: 24px;
+                }
+                QScrollBar::handle:vertical:hover {
+                    background: #5b2138;
+                }
+                QScrollBar::add-line:vertical,
+                QScrollBar::sub-line:vertical {
+                    height: 0px;
+                }
+                QScrollBar::add-page:vertical,
+                QScrollBar::sub-page:vertical {
+                    background: transparent;
+                }
+                QScrollBar:horizontal {
+                    background: transparent;
+                    height: 8px;
+                    margin: 0 2px 0 2px;
+                }
+                QScrollBar::handle:horizontal {
+                    background: #3b2730;
+                    border-radius: 4px;
+                    min-width: 24px;
+                }
+                QScrollBar::handle:horizontal:hover {
+                    background: #5b2138;
+                }
+                QScrollBar::add-line:horizontal,
+                QScrollBar::sub-line:horizontal {
+                    width: 0px;
+                }
+                QScrollBar::add-page:horizontal,
+                QScrollBar::sub-page:horizontal {
+                    background: transparent;
+                }
+                QPushButton#ToolButton {
+                    background: #160e13;
+                    border: 1px solid #3b2730;
+                    border-radius: 12px;
+                    padding: 6px 10px;
+                    font-weight: 600;
+                }
+                QPushButton#ToolButton:checked {
+                    background: #2a1b22;
+                    border: 1px solid #5b2138;
+                    color: #f7c6de;
+                }
+                QGraphicsView#CanvasView { background: transparent; border: none; }
                 QFrame#ArtworkFrame {
                     background: #160e13;
                     border: 1px solid #3b2730;
@@ -342,6 +480,139 @@ class MainWindow(QMainWindow):
                     border: 1px solid #f1d7e6;
                     border-radius: 18px;
                 }
+                QFrame#EditorCanvas {
+                    background: #ffffff;
+                    border: 1px solid #f1d7e6;
+                    border-radius: 18px;
+                }
+                QFrame#EditorOptions {
+                    background: #ffffff;
+                    border: 1px solid #f1d7e6;
+                    border-radius: 16px;
+                }
+                QFrame#EditorPanel QPushButton {
+                    min-height: 32px;
+                    padding: 4px 10px;
+                }
+                QFrame#EditorPanel QPushButton#PrimaryButton {
+                    min-height: 36px;
+                }
+                QFrame#EditorPanel QPushButton#ToolButton {
+                    min-height: 30px;
+                    padding: 4px 8px;
+                }
+                QFrame#EditorPanel QLineEdit,
+                QFrame#EditorPanel QComboBox,
+                QFrame#EditorPanel QSpinBox {
+                    min-height: 36px;
+                }
+                QFrame#LayerRow {
+                    background: #f6eff6;
+                    border: 1px solid #f1d7e6;
+                    border-radius: 12px;
+                }
+                QFrame#LayerRow[active="true"] {
+                    border: 1px solid #f58abf;
+                    background: #ffe1ef;
+                }
+                QFrame#LayerRow[hidden="true"] {
+                    background: #f9f1f6;
+                    border: 1px solid #f1d7e6;
+                }
+                QLabel#LayerBadge {
+                    background: #ffe1ef;
+                    color: #f01d85;
+                    border-radius: 10px;
+                    min-width: 34px;
+                    min-height: 28px;
+                    font-weight: 700;
+                    qproperty-alignment: 'AlignCenter';
+                }
+                QToolButton#LayerEye,
+                QToolButton#LayerLock,
+                QToolButton#LayerAdd {
+                    background: #ffffff;
+                    border: 1px solid #f1d7e6;
+                    border-radius: 8px;
+                    min-width: 24px;
+                    min-height: 24px;
+                    padding: 0px;
+                }
+                QToolButton#LockRatioButton {
+                    background: #ffffff;
+                    border: 1px solid #f1d7e6;
+                    border-radius: 10px;
+                    min-width: 28px;
+                    min-height: 28px;
+                    padding: 0px;
+                }
+                QToolButton#LayerArrow {
+                    background: #ffffff;
+                    border: 1px solid #f1d7e6;
+                    border-radius: 8px;
+                    min-width: 22px;
+                    min-height: 22px;
+                    padding: 0px;
+                }
+                QScrollArea#EditorScroll { background: transparent; border: none; }
+                QScrollArea#EditorScroll QWidget { background: transparent; }
+                QScrollArea#LayersScroll { background: transparent; border: none; }
+                QScrollArea#LayersScroll QWidget { background: transparent; }
+                QScrollBar:vertical {
+                    background: transparent;
+                    width: 8px;
+                    margin: 2px 0 2px 0;
+                }
+                QScrollBar::handle:vertical {
+                    background: #f1d7e6;
+                    border-radius: 4px;
+                    min-height: 24px;
+                }
+                QScrollBar::handle:vertical:hover {
+                    background: #f58abf;
+                }
+                QScrollBar::add-line:vertical,
+                QScrollBar::sub-line:vertical {
+                    height: 0px;
+                }
+                QScrollBar::add-page:vertical,
+                QScrollBar::sub-page:vertical {
+                    background: transparent;
+                }
+                QScrollBar:horizontal {
+                    background: transparent;
+                    height: 8px;
+                    margin: 0 2px 0 2px;
+                }
+                QScrollBar::handle:horizontal {
+                    background: #f1d7e6;
+                    border-radius: 4px;
+                    min-width: 24px;
+                }
+                QScrollBar::handle:horizontal:hover {
+                    background: #f58abf;
+                }
+                QScrollBar::add-line:horizontal,
+                QScrollBar::sub-line:horizontal {
+                    width: 0px;
+                }
+                QScrollBar::add-page:horizontal,
+                QScrollBar::sub-page:horizontal {
+                    background: transparent;
+                }
+                QPushButton#ToolButton {
+                    background: #ffffff;
+                    border: 1px solid #f1d7e6;
+                    border-radius: 12px;
+                    padding: 6px 10px;
+                    font-weight: 600;
+                }
+                QPushButton#ToolButton:checked {
+                    background: #ffe1ef;
+                    border: 1px solid #f58abf;
+                    color: #f01d85;
+                }
+                QGraphicsView#CanvasView { background: transparent; border: none; }
                 QFrame#ArtworkFrame {
                     background: #fff7fb;
                     border: 1px solid #f1d7e6;

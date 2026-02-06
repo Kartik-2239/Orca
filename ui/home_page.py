@@ -86,7 +86,41 @@ class HomePage(QWidget):
         self.download_btn.setIconSize(QSize(24, 24))
         self.download_btn.setText("Download")
         self.download_btn.clicked.connect(lambda: self.on_navigate("download"))
+
+        self.editor_btn = QToolButton()
+        self.editor_btn.setObjectName("ActionButton")
+        self.editor_btn.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
+        self.editor_btn.setIcon(
+            svg_icon(
+                '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#f01d85">'
+                '<path d="M4 20h4l9-9-4-4-9 9v4Z"/>'
+                '<path d="M14.5 5.5 18.5 9.5 20 8l-4-4-1.5 1.5Z"/></svg>',
+                24,
+            )
+        )
+        self.editor_btn.setIconSize(QSize(24, 24))
+        self.editor_btn.setText("Editor")
+        self.editor_btn.clicked.connect(lambda: self.on_navigate("image_editor"))
+
+        self.player_btn = QToolButton()
+        self.player_btn.setObjectName("ActionButton")
+        self.player_btn.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
+        self.player_btn.setIcon(
+            svg_icon(
+                '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#f01d85">'
+                '<path d="M8 5v14l11-7-11-7Z"/></svg>',
+                24,
+            )
+        )
+        self.player_btn.setIconSize(QSize(24, 24))
+        self.player_btn.setText("Player")
+        self.player_btn.clicked.connect(lambda: self.on_navigate("player"))
+
         btn_row.addWidget(self.download_btn, 0, Qt.AlignLeft)
+        btn_row.addSpacing(12)
+        btn_row.addWidget(self.player_btn, 0, Qt.AlignLeft)
+        btn_row.addSpacing(12)
+        btn_row.addWidget(self.editor_btn, 0, Qt.AlignLeft)
 
         top_divider = QFrame()
         top_divider.setObjectName("Divider")
