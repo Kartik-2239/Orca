@@ -102,23 +102,7 @@ class HomePage(QWidget):
         self.editor_btn.setText("Editor")
         self.editor_btn.clicked.connect(lambda: self.on_navigate("image_editor"))
 
-        self.player_btn = QToolButton()
-        self.player_btn.setObjectName("ActionButton")
-        self.player_btn.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
-        self.player_btn.setIcon(
-            svg_icon(
-                '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#f01d85">'
-                '<path d="M8 5v14l11-7-11-7Z"/></svg>',
-                24,
-            )
-        )
-        self.player_btn.setIconSize(QSize(24, 24))
-        self.player_btn.setText("Player")
-        self.player_btn.clicked.connect(lambda: self.on_navigate("player"))
-
         btn_row.addWidget(self.download_btn, 0, Qt.AlignLeft)
-        btn_row.addSpacing(12)
-        btn_row.addWidget(self.player_btn, 0, Qt.AlignLeft)
         btn_row.addSpacing(12)
         btn_row.addWidget(self.editor_btn, 0, Qt.AlignLeft)
 

@@ -7,7 +7,6 @@ from services.state import AppState, ensure_storage, load_state, save_state
 from ui.download_page import DownloadPage
 from ui.home_page import HomePage
 from ui.image_editor_page import ImageEditorPage
-from ui.player_page import PlayerPage
 
 
 class MainWindow(QMainWindow):
@@ -40,12 +39,10 @@ class MainWindow(QMainWindow):
 
         self.home_page = HomePage(self.state, self.set_theme, self.show_page)
         self.download_page = DownloadPage(self.state, self.set_theme, self.show_page)
-        self.player_page = PlayerPage(self.state, self.set_theme, self.show_page)
         self.image_editor_page = ImageEditorPage(self.state, self.set_theme, self.show_page)
 
         self.stack.addWidget(self.home_page)
         self.stack.addWidget(self.download_page)
-        self.stack.addWidget(self.player_page)
         self.stack.addWidget(self.image_editor_page)
 
         self.setCentralWidget(self.stack)
@@ -56,11 +53,10 @@ class MainWindow(QMainWindow):
         page = page or "home"
         if page == "download":
             self.stack.setCurrentWidget(self.download_page)
-        elif page == "player":
-            self.stack.setCurrentWidget(self.player_page)
         elif page == "image_editor":
             self.stack.setCurrentWidget(self.image_editor_page)
         else:
+            page = "home"
             self.stack.setCurrentWidget(self.home_page)
         self.state.last_page = page
 
@@ -69,7 +65,6 @@ class MainWindow(QMainWindow):
         self.apply_theme(theme)
         self.home_page.set_theme(theme)
         self.download_page.set_theme(theme)
-        self.player_page.set_theme(theme)
 
     def apply_theme(self, theme: str) -> None:
         if theme == "Dark":
@@ -682,7 +677,6 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, event) -> None:
         self.download_page.update_state(self.state)
-        self.player_page.update_state(self.state)
         self.home_page.apply_state(self.state)
         self.state.window_size = [self.width(), self.height()]
         self.state.window_pos = [self.x(), self.y()]
