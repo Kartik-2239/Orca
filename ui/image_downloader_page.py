@@ -113,25 +113,18 @@ class ImageDownloaderPage(QWidget):
         nav_bar.addWidget(header_title)
         nav_bar.addWidget(home_btn)
         nav_bar.addStretch(1)
-
-        self.theme_toggle = QToolButton()
-        self.theme_toggle.setObjectName("ThemeToggle")
-        self.theme_toggle.setCheckable(True)
-        self._sun_icon = svg_icon(
-            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#f01d85">'
-            '<circle cx="12" cy="12" r="5"/>'
-            "</svg>",
-            12,
+        self.settings_icon_btn = QToolButton()
+        self.settings_icon_btn.setObjectName("ThemeToggle")
+        self.settings_icon_btn.setIcon(
+            svg_icon(
+                '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#f01d85">'
+                '<path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm8.94 4a7.87 7.87 0 0 0-.13-1.43l2.02-1.58-1.9-3.29-2.45.98a8.2 8.2 0 0 0-2.48-1.44L15.5 2h-3l-.5 2.24a8.2 8.2 0 0 0-2.48 1.44l-2.45-.98-1.9 3.29 2.02 1.58A7.87 7.87 0 0 0 7.06 12c0 .49.05.97.13 1.43l-2.02 1.58 1.9 3.29 2.45-.98a8.2 8.2 0 0 0 2.48 1.44L12.5 22h3l.5-2.24a8.2 8.2 0 0 0 2.48-1.44l2.45.98 1.9-3.29-2.02-1.58c.08-.46.13-.94.13-1.43Z" fill="#f7c6de"/></svg>',
+                12,
+            )
         )
-        self._moon_icon = svg_icon(
-            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#f7c6de">'
-            '<path d="M21 14.5A8.5 8.5 0 1 1 9.5 3a7 7 0 1 0 11.5 11.5Z"/></svg>',
-            12,
-        )
-        self.theme_toggle.setIcon(self._sun_icon)
-        self.theme_toggle.setIconSize(QSize(12, 12))
-        self.theme_toggle.toggled.connect(self._on_theme_toggled)
-        nav_bar.addWidget(self.theme_toggle)
+        self.settings_icon_btn.setIconSize(QSize(12, 12))
+        self.settings_icon_btn.clicked.connect(lambda: self.on_navigate("settings"))
+        nav_bar.addWidget(self.settings_icon_btn)
 
         top_divider = QFrame()
         top_divider.setObjectName("Divider")
@@ -192,10 +185,7 @@ class ImageDownloaderPage(QWidget):
             self.on_theme_change("Light")
 
     def set_theme(self, theme: str) -> None:
-        self.theme_toggle.blockSignals(True)
-        self.theme_toggle.setChecked(theme == "Dark")
-        self.theme_toggle.blockSignals(False)
-        self.theme_toggle.setIcon(self._moon_icon if theme == "Dark" else self._sun_icon)
+        return
 
     def _set_busy(self, busy: bool, message: str = "") -> None:
         self.bulk_download_btn.setEnabled(not busy)

@@ -6,11 +6,13 @@ from PySide6.QtWidgets import QApplication, QMainWindow, QStackedWidget
 from services.state import AppState, ensure_storage, load_state, save_state
 from ui.download_page import DownloadPage
 from ui.home_page import HomePage
-from ui.image_batch_page import ImageBatchPage
 from ui.image_downloader_page import ImageDownloaderPage
 from ui.image_editor_page import ImageEditorPage
 from ui.pdf_editor_page import PdfEditorPage
 from ui.video_edits_page import VideoEditsPage
+from ui.generate_docs_page import GenerateDocsPage
+from ui.rename_files_page import RenameFilesPage
+from ui.settings_page import SettingsPage
 
 
 class MainWindow(QMainWindow):
@@ -45,17 +47,21 @@ class MainWindow(QMainWindow):
         self.download_page = DownloadPage(self.state, self.set_theme, self.show_page)
         self.image_editor_page = ImageEditorPage(self.state, self.set_theme, self.show_page)
         self.pdf_editor_page = PdfEditorPage(self.state, self.set_theme, self.show_page)
-        self.image_batch_page = ImageBatchPage(self.state, self.set_theme, self.show_page)
-        self.image_downloader_page = ImageDownloaderPage(self.state, self.set_theme, self.show_page)
         self.video_edits_page = VideoEditsPage(self.state, self.set_theme, self.show_page)
+        self.generate_docs_page = GenerateDocsPage(self.state, self.set_theme, self.show_page)
+        self.rename_files_page = RenameFilesPage(self.state, self.set_theme, self.show_page)
+        self.image_downloader_page = ImageDownloaderPage(self.state, self.set_theme, self.show_page)
+        self.settings_page = SettingsPage(self.state, self.set_theme, self.show_page)
 
         self.stack.addWidget(self.home_page)
         self.stack.addWidget(self.download_page)
         self.stack.addWidget(self.image_editor_page)
         self.stack.addWidget(self.pdf_editor_page)
-        self.stack.addWidget(self.image_batch_page)
-        self.stack.addWidget(self.image_downloader_page)
         self.stack.addWidget(self.video_edits_page)
+        self.stack.addWidget(self.generate_docs_page)
+        self.stack.addWidget(self.rename_files_page)
+        self.stack.addWidget(self.image_downloader_page)
+        self.stack.addWidget(self.settings_page)
 
         self.setCentralWidget(self.stack)
         self.apply_theme(self.state.theme)
@@ -69,12 +75,16 @@ class MainWindow(QMainWindow):
             self.stack.setCurrentWidget(self.image_editor_page)
         elif page == "pdf_editor":
             self.stack.setCurrentWidget(self.pdf_editor_page)
-        elif page == "image_batch":
-            self.stack.setCurrentWidget(self.image_batch_page)
-        elif page == "image_downloader":
-            self.stack.setCurrentWidget(self.image_downloader_page)
         elif page == "video_edits":
             self.stack.setCurrentWidget(self.video_edits_page)
+        elif page == "generate_docs":
+            self.stack.setCurrentWidget(self.generate_docs_page)
+        elif page == "rename_files":
+            self.stack.setCurrentWidget(self.rename_files_page)
+        elif page == "image_downloader":
+            self.stack.setCurrentWidget(self.image_downloader_page)
+        elif page == "settings":
+            self.stack.setCurrentWidget(self.settings_page)
         else:
             page = "home"
             self.stack.setCurrentWidget(self.home_page)
@@ -86,9 +96,11 @@ class MainWindow(QMainWindow):
         self.home_page.set_theme(theme)
         self.download_page.set_theme(theme)
         self.pdf_editor_page.set_theme(theme)
-        self.image_batch_page.set_theme(theme)
         self.image_downloader_page.set_theme(theme)
         self.video_edits_page.set_theme(theme)
+        self.generate_docs_page.set_theme(theme)
+        self.rename_files_page.set_theme(theme)
+        self.settings_page.set_theme(theme)
 
     def apply_theme(self, theme: str) -> None:
         if theme == "Dark":

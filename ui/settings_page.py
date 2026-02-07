@@ -7,6 +7,7 @@ from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QPushButton,
     QToolButton,
     QVBoxLayout,
@@ -26,7 +27,7 @@ def svg_icon(svg: str, size: int) -> QIcon:
     return QIcon(QPixmap.fromImage(image))
 
 
-class ImageBatchPage(QWidget):
+class SettingsPage(QWidget):
     def __init__(self, state: AppState, on_theme_change, on_navigate) -> None:
         super().__init__()
         self.state = state
@@ -60,9 +61,29 @@ class ImageBatchPage(QWidget):
         nav_bar.addWidget(home_btn)
         nav_bar.addStretch(1)
 
-        self.theme_toggle = QToolButton()
-        self.theme_toggle.setObjectName("ThemeToggle")
-        self.theme_toggle.setCheckable(True)
+        self.settings_icon_btn = QToolButton()
+        self.settings_icon_btn.setObjectName("ThemeToggle")
+        self.settings_icon_btn.setEnabled(False)
+        self.settings_icon_btn.setIcon(
+            svg_icon(
+                '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#f01d85">'
+                '<path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm8.94 4a7.87 7.87 0 0 0-.13-1.43l2.02-1.58-1.9-3.29-2.45.98a8.2 8.2 0 0 0-2.48-1.44L15.5 2h-3l-.5 2.24a8.2 8.2 0 0 0-2.48 1.44l-2.45-.98-1.9 3.29 2.02 1.58A7.87 7.87 0 0 0 7.06 12c0 .49.05.97.13 1.43l-2.02 1.58 1.9 3.29 2.45-.98a8.2 8.2 0 0 0 2.48 1.44L12.5 22h3l.5-2.24a8.2 8.2 0 0 0 2.48-1.44l2.45.98 1.9-3.29-2.02-1.58c.08-.46.13-.94.13-1.43Z" fill="#f7c6de"/></svg>',
+                12,
+            )
+        )
+        self.settings_icon_btn.setIconSize(QSize(12, 12))
+        nav_bar.addWidget(self.settings_icon_btn)
+
+        top_divider = QFrame()
+        top_divider.setObjectName("Divider")
+        top_divider.setFixedHeight(1)
+        top_divider.setFrameShape(QFrame.HLine)
+
+        title = QLabel("Settings")
+        title.setObjectName("PreviewTitle")
+        subtitle = QLabel("Configure Orca.")
+        subtitle.setObjectName("SubtitleLabel")
+
         self._sun_icon = svg_icon(
             '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#f01d85">'
             '<circle cx="12" cy="12" r="5"/>'
@@ -74,77 +95,59 @@ class ImageBatchPage(QWidget):
             '<path d="M21 14.5A8.5 8.5 0 1 1 9.5 3a7 7 0 1 0 11.5 11.5Z"/></svg>',
             12,
         )
+
+        theme_card = QFrame()
+        theme_card.setObjectName("OptionsCard")
+        theme_layout = QVBoxLayout(theme_card)
+        theme_layout.setContentsMargins(16, 16, 16, 16)
+        theme_layout.setSpacing(12)
+
+        theme_title = QLabel("Appearance")
+        theme_title.setObjectName("SectionLabel")
+        theme_layout.addWidget(theme_title)
+
+        theme_row = QHBoxLayout()
+        theme_label = QLabel("Theme")
+        theme_label.setObjectName("FieldLabel")
+        self.theme_toggle = QToolButton()
+        self.theme_toggle.setObjectName("ThemeToggle")
+        self.theme_toggle.setCheckable(True)
         self.theme_toggle.setIcon(self._sun_icon)
         self.theme_toggle.setIconSize(QSize(12, 12))
         self.theme_toggle.toggled.connect(self._on_theme_toggled)
-        nav_bar.addWidget(self.theme_toggle)
+        theme_row.addWidget(theme_label)
+        theme_row.addStretch(1)
+        theme_row.addWidget(self.theme_toggle)
+        theme_layout.addLayout(theme_row)
 
-        top_divider = QFrame()
-        top_divider.setObjectName("Divider")
-        top_divider.setFixedHeight(1)
-        top_divider.setFrameShape(QFrame.HLine)
+        ai_card = QFrame()
+        ai_card.setObjectName("OptionsCard")
+        ai_layout = QVBoxLayout(ai_card)
+        ai_layout.setContentsMargins(16, 16, 16, 16)
+        ai_layout.setSpacing(12)
 
-        title = QLabel("Image Batch Tools")
-        title.setObjectName("PreviewTitle")
-        subtitle = QLabel("Quick shortcuts (coming soon).")
-        subtitle.setObjectName("SubtitleLabel")
+        ai_title = QLabel("AI")
+        ai_title.setObjectName("SectionLabel")
+        ai_layout.addWidget(ai_title)
 
-        btn_row = QHBoxLayout()
-        btn_row.setSpacing(12)
-        btn_row.setAlignment(Qt.AlignLeft)
-
-        self.upscale_btn = QToolButton()
-        self.upscale_btn.setObjectName("ActionButton")
-        self.upscale_btn.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
-        self.upscale_btn.setIcon(
-            svg_icon(
-                '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#f01d85">'
-                '<path d="M4 4h6v2H6v4H4V4Zm10 0h6v6h-2V6h-4V4ZM4 14h2v4h4v2H4v-6Zm14 0h2v6h-6v-2h4v-4Z"/>'
-                '<path d="M9 9h6v6H9z" fill="#f7c6de"/></svg>',
-                24,
-            )
-        )
-        self.upscale_btn.setIconSize(QSize(24, 24))
-        self.upscale_btn.setText("Anime Upscale")
-
-        self.rename_btn = QToolButton()
-        self.rename_btn.setObjectName("ActionButton")
-        self.rename_btn.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
-        self.rename_btn.setIcon(
-            svg_icon(
-                '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#f01d85">'
-                '<path d="M4 5h10v2H4zM4 9h10v2H4zM4 13h6v2H4z"/>'
-                '<path d="M14 14.5 18.5 10 20 11.5 15.5 16H14v-1.5Z" fill="#f7c6de"/></svg>',
-                24,
-            )
-        )
-        self.rename_btn.setIconSize(QSize(24, 24))
-        self.rename_btn.setText("Rename Files")
-
-        self.docs_btn = QToolButton()
-        self.docs_btn.setObjectName("ActionButton")
-        self.docs_btn.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
-        self.docs_btn.setIcon(
-            svg_icon(
-                '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#f01d85">'
-                '<path d="M6 2h7l5 5v15a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Z"/>'
-                '<path d="M13 2v5h5" fill="#f7c6de"/>'
-                '<path d="M8 12h8v2H8zm0 4h6v2H8z"/></svg>',
-                24,
-            )
-        )
-        self.docs_btn.setIconSize(QSize(24, 24))
-        self.docs_btn.setText("Generate Docs")
-
-        btn_row.addWidget(self.upscale_btn, 0, Qt.AlignLeft)
-        btn_row.addWidget(self.rename_btn, 0, Qt.AlignLeft)
-        btn_row.addWidget(self.docs_btn, 0, Qt.AlignLeft)
+        ai_row = QHBoxLayout()
+        ai_label = QLabel("API Key")
+        ai_label.setObjectName("FieldLabel")
+        self.ai_key_input = QLineEdit()
+        self.ai_key_input.setPlaceholderText("Enter API key")
+        self.ai_key_input.setEchoMode(QLineEdit.Password)
+        self.ai_key_input.editingFinished.connect(self._save_ai_key)
+        ai_row.addWidget(ai_label)
+        ai_row.addStretch(1)
+        ai_row.addWidget(self.ai_key_input)
+        ai_layout.addLayout(ai_row)
 
         card_layout.addLayout(nav_bar)
         card_layout.addWidget(top_divider)
         card_layout.addWidget(title)
         card_layout.addWidget(subtitle)
-        card_layout.addLayout(btn_row)
+        card_layout.addWidget(theme_card)
+        card_layout.addWidget(ai_card)
         card_layout.addStretch(1)
 
         root_layout.addWidget(card)
@@ -162,3 +165,9 @@ class ImageBatchPage(QWidget):
         self.theme_toggle.setChecked(theme == "Dark")
         self.theme_toggle.blockSignals(False)
         self.theme_toggle.setIcon(self._moon_icon if theme == "Dark" else self._sun_icon)
+        self.ai_key_input.blockSignals(True)
+        self.ai_key_input.setText(self.state.ai_api_key)
+        self.ai_key_input.blockSignals(False)
+
+    def _save_ai_key(self) -> None:
+        self.state.ai_api_key = self.ai_key_input.text().strip()

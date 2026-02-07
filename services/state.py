@@ -28,6 +28,7 @@ class AppState:
     pdf_open_files: list[str] = field(default_factory=list)
     last_image_open_dir: str | None = None
     last_image_export_dir: str | None = None
+    ai_api_key: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

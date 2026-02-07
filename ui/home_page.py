@@ -136,25 +136,18 @@ class HomePage(QWidget):
         nav_bar.addWidget(header_title)
         nav_bar.addWidget(home_btn)
         nav_bar.addStretch(1)
-
-        self.theme_toggle = QToolButton()
-        self.theme_toggle.setObjectName("ThemeToggle")
-        self.theme_toggle.setCheckable(True)
-        self._sun_icon = svg_icon(
-            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#f01d85">'
-            '<circle cx="12" cy="12" r="5"/>'
-            "</svg>",
-            12,
+        self.settings_icon_btn = QToolButton()
+        self.settings_icon_btn.setObjectName("ThemeToggle")
+        self.settings_icon_btn.setIcon(
+            svg_icon(
+                '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#f01d85">'
+                '<path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm8.94 4a7.87 7.87 0 0 0-.13-1.43l2.02-1.58-1.9-3.29-2.45.98a8.2 8.2 0 0 0-2.48-1.44L15.5 2h-3l-.5 2.24a8.2 8.2 0 0 0-2.48 1.44l-2.45-.98-1.9 3.29 2.02 1.58A7.87 7.87 0 0 0 7.06 12c0 .49.05.97.13 1.43l-2.02 1.58 1.9 3.29 2.45-.98a8.2 8.2 0 0 0 2.48 1.44L12.5 22h3l.5-2.24a8.2 8.2 0 0 0 2.48-1.44l2.45.98 1.9-3.29-2.02-1.58c.08-.46.13-.94.13-1.43Z" fill="#f7c6de"/></svg>',
+                12,
+            )
         )
-        self._moon_icon = svg_icon(
-            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#f7c6de">'
-            '<path d="M21 14.5A8.5 8.5 0 1 1 9.5 3a7 7 0 1 0 11.5 11.5Z"/></svg>',
-            12,
-        )
-        self.theme_toggle.setIcon(self._sun_icon)
-        self.theme_toggle.setIconSize(QSize(12, 12))
-        self.theme_toggle.toggled.connect(self._on_theme_toggled)
-        nav_bar.addWidget(self.theme_toggle)
+        self.settings_icon_btn.setIconSize(QSize(12, 12))
+        self.settings_icon_btn.clicked.connect(lambda: self.on_navigate("settings"))
+        nav_bar.addWidget(self.settings_icon_btn)
 
         title = QLabel("Choose an action")
         title.setObjectName("PreviewTitle")
@@ -210,23 +203,6 @@ class HomePage(QWidget):
         self.pdf_btn.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.pdf_btn.clicked.connect(lambda: self.on_navigate("pdf_editor"))
 
-        self.batch_btn = QToolButton()
-        self.batch_btn.setObjectName("ActionButton")
-        self.batch_btn.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
-        self.batch_btn.setIcon(
-            svg_icon(
-                '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#f01d85">'
-                '<rect x="4" y="5" width="10" height="12" rx="2"/>'
-                '<rect x="10" y="7" width="10" height="12" rx="2" fill="#f7c6de"/>'
-                '<path d="M7 9h4v2H7zm0 4h4v2H7z"/></svg>',
-                24,
-            )
-        )
-        self.batch_btn.setIconSize(QSize(24, 24))
-        self.batch_btn.setText("Batch")
-        self.batch_btn.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        self.batch_btn.clicked.connect(lambda: self.on_navigate("image_batch"))
-
         self.bulk_images_btn = QToolButton()
         self.bulk_images_btn.setObjectName("ActionButton")
         self.bulk_images_btn.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
@@ -256,20 +232,78 @@ class HomePage(QWidget):
             )
         )
         self.video_edit_btn.setIconSize(QSize(24, 24))
-        self.video_edit_btn.setText("Video Edits")
+        self.video_edit_btn.setText("Video Tools")
         self.video_edit_btn.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.video_edit_btn.clicked.connect(lambda: self.on_navigate("video_edits"))
 
         buttons = [
             self.download_btn,
             self.pdf_btn,
-            self.batch_btn,
             self.bulk_images_btn,
             self.video_edit_btn,
             self.editor_btn,
         ]
         for button in buttons:
             btn_flow.addWidget(button)
+
+        ai_title = QLabel("AI Tools")
+        ai_title.setObjectName("SectionLabel")
+
+        ai_flow = QHBoxLayout()
+        ai_flow.setSpacing(10)
+
+        self.anime_upscale_btn = QToolButton()
+        self.anime_upscale_btn.setObjectName("ActionButton")
+        self.anime_upscale_btn.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
+        self.anime_upscale_btn.setIcon(
+            svg_icon(
+                '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#f01d85">'
+                '<path d="M4 6h16v12H4z"/><path d="M7 9h4v4H7z" fill="#f7c6de"/>'
+                '<path d="M14 9h3v3h-3z"/></svg>',
+                24,
+            )
+        )
+        self.anime_upscale_btn.setIconSize(QSize(24, 24))
+        self.anime_upscale_btn.setText("Art Upscale")
+        self.anime_upscale_btn.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+
+        self.generate_docs_btn = QToolButton()
+        self.generate_docs_btn.setObjectName("ActionButton")
+        self.generate_docs_btn.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
+        self.generate_docs_btn.setIcon(
+            svg_icon(
+                '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#f01d85">'
+                '<path d="M6 2h7l5 5v15a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Z"/>'
+                '<path d="M13 2v5h5" fill="#f7c6de"/>'
+                '<path d="M8 12h8v2H8zm0 4h6v2H8z"/></svg>',
+                24,
+            )
+        )
+        self.generate_docs_btn.setIconSize(QSize(24, 24))
+        self.generate_docs_btn.setText("Generate Docs")
+        self.generate_docs_btn.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.generate_docs_btn.clicked.connect(lambda: self.on_navigate("generate_docs"))
+
+        self.rename_files_btn = QToolButton()
+        self.rename_files_btn.setObjectName("ActionButton")
+        self.rename_files_btn.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
+        self.rename_files_btn.setIcon(
+            svg_icon(
+                '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#f01d85">'
+                '<path d="M4 4h16v5H4z"/><path d="M4 10h10v10H4z" fill="#f7c6de"/>'
+                '<path d="M16 12h4v2h-4zM16 16h4v2h-4z"/></svg>',
+                24,
+            )
+        )
+        self.rename_files_btn.setIconSize(QSize(24, 24))
+        self.rename_files_btn.setText("Rename Files")
+        self.rename_files_btn.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.rename_files_btn.clicked.connect(lambda: self.on_navigate("rename_files"))
+
+        ai_flow.addWidget(self.anime_upscale_btn)
+        ai_flow.addWidget(self.generate_docs_btn)
+        ai_flow.addWidget(self.rename_files_btn)
+        ai_flow.addStretch(1)
 
         top_divider = QFrame()
         top_divider.setObjectName("Divider")
@@ -280,6 +314,8 @@ class HomePage(QWidget):
         card_layout.addWidget(top_divider)
         card_layout.addWidget(title)
         card_layout.addLayout(btn_flow)
+        card_layout.addWidget(ai_title)
+        card_layout.addLayout(ai_flow)
         card_layout.addStretch(1)
 
         layout.addWidget(card)
@@ -290,14 +326,9 @@ class HomePage(QWidget):
 
     def _on_theme_toggled(self, checked: bool) -> None:
         if checked:
-            self.theme_toggle.setIcon(self._moon_icon)
             self.on_theme_change("Dark")
         else:
-            self.theme_toggle.setIcon(self._sun_icon)
             self.on_theme_change("Light")
 
     def set_theme(self, theme: str) -> None:
-        self.theme_toggle.blockSignals(True)
-        self.theme_toggle.setChecked(theme == "Dark")
-        self.theme_toggle.blockSignals(False)
-        self.theme_toggle.setIcon(self._moon_icon if theme == "Dark" else self._sun_icon)
+        return
