@@ -19,6 +19,7 @@ env/
 # App data
 downloads/
 MEMORIES.md
+TODO.md
 
 # OS
 .DS_Store

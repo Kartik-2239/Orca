@@ -6,7 +6,11 @@ from PySide6.QtWidgets import QApplication, QMainWindow, QStackedWidget
 from services.state import AppState, ensure_storage, load_state, save_state
 from ui.download_page import DownloadPage
 from ui.home_page import HomePage
+from ui.image_batch_page import ImageBatchPage
+from ui.image_downloader_page import ImageDownloaderPage
 from ui.image_editor_page import ImageEditorPage
+from ui.pdf_editor_page import PdfEditorPage
+from ui.video_edits_page import VideoEditsPage
 
 
 class MainWindow(QMainWindow):
@@ -40,10 +44,18 @@ class MainWindow(QMainWindow):
         self.home_page = HomePage(self.state, self.set_theme, self.show_page)
         self.download_page = DownloadPage(self.state, self.set_theme, self.show_page)
         self.image_editor_page = ImageEditorPage(self.state, self.set_theme, self.show_page)
+        self.pdf_editor_page = PdfEditorPage(self.state, self.set_theme, self.show_page)
+        self.image_batch_page = ImageBatchPage(self.state, self.set_theme, self.show_page)
+        self.image_downloader_page = ImageDownloaderPage(self.state, self.set_theme, self.show_page)
+        self.video_edits_page = VideoEditsPage(self.state, self.set_theme, self.show_page)
 
         self.stack.addWidget(self.home_page)
         self.stack.addWidget(self.download_page)
         self.stack.addWidget(self.image_editor_page)
+        self.stack.addWidget(self.pdf_editor_page)
+        self.stack.addWidget(self.image_batch_page)
+        self.stack.addWidget(self.image_downloader_page)
+        self.stack.addWidget(self.video_edits_page)
 
         self.setCentralWidget(self.stack)
         self.apply_theme(self.state.theme)
@@ -55,6 +67,14 @@ class MainWindow(QMainWindow):
             self.stack.setCurrentWidget(self.download_page)
         elif page == "image_editor":
             self.stack.setCurrentWidget(self.image_editor_page)
+        elif page == "pdf_editor":
+            self.stack.setCurrentWidget(self.pdf_editor_page)
+        elif page == "image_batch":
+            self.stack.setCurrentWidget(self.image_batch_page)
+        elif page == "image_downloader":
+            self.stack.setCurrentWidget(self.image_downloader_page)
+        elif page == "video_edits":
+            self.stack.setCurrentWidget(self.video_edits_page)
         else:
             page = "home"
             self.stack.setCurrentWidget(self.home_page)
@@ -65,6 +85,10 @@ class MainWindow(QMainWindow):
         self.apply_theme(theme)
         self.home_page.set_theme(theme)
         self.download_page.set_theme(theme)
+        self.pdf_editor_page.set_theme(theme)
+        self.image_batch_page.set_theme(theme)
+        self.image_downloader_page.set_theme(theme)
+        self.video_edits_page.set_theme(theme)
 
     def apply_theme(self, theme: str) -> None:
         if theme == "Dark":
@@ -174,11 +198,23 @@ class MainWindow(QMainWindow):
                     border: 1px solid #3b2730;
                     border-radius: 18px;
                 }
+                QFrame#PdfPreview {
+                    background: transparent;
+                    border: 1px solid #3b2730;
+                    border-radius: 18px;
+                }
                 QFrame#EditorOptions {
                     background: #1c141a;
                     border: 1px solid #3b2730;
                     border-radius: 16px;
                 }
+                QFrame#EditorOptions QPushButton { color: #b690a5; }
+                QFrame#EditorPanel {
+                    background: #1c141a;
+                    border: none;
+                    border-radius: 16px;
+                }
+                QTabWidget::pane { border: 0px; background: transparent; }
                 QFrame#EditorPanel QPushButton {
                     min-height: 32px;
                     padding: 4px 10px;
@@ -243,10 +279,26 @@ class MainWindow(QMainWindow):
                     min-height: 22px;
                     padding: 0px;
                 }
+                QToolButton#ToolButton {
+                    background: #160e13;
+                    border: 1px solid #3b2730;
+                    border-radius: 10px;
+                    min-width: 32px;
+                    min-height: 28px;
+                    padding: 0px 8px;
+                    color: #b690a5;
+                }
                 QScrollArea#EditorScroll { background: transparent; border: none; }
                 QScrollArea#EditorScroll QWidget { background: transparent; }
                 QScrollArea#LayersScroll { background: transparent; border: none; }
                 QScrollArea#LayersScroll QWidget { background: transparent; }
+                QListWidget#PdfPageList { background: transparent; border: none; }
+                QListWidget#PdfPageList::item { color: #b690a5; }
+                QListWidget#PdfPageList::item:selected {
+                    background: #2a1b22;
+                    border: 1px solid #5b2138;
+                    border-radius: 10px;
+                }
                 QScrollBar:vertical {
                     background: transparent;
                     width: 8px;
@@ -480,11 +532,23 @@ class MainWindow(QMainWindow):
                     border: 1px solid #f1d7e6;
                     border-radius: 18px;
                 }
+                QFrame#PdfPreview {
+                    background: transparent;
+                    border: 1px solid #f1d7e6;
+                    border-radius: 18px;
+                }
                 QFrame#EditorOptions {
                     background: #ffffff;
                     border: 1px solid #f1d7e6;
                     border-radius: 16px;
                 }
+                QFrame#EditorOptions QPushButton { color: #b25574; }
+                QFrame#EditorPanel {
+                    background: #ffffff;
+                    border: none;
+                    border-radius: 16px;
+                }
+                QTabWidget::pane { border: 0px; background: transparent; }
                 QFrame#EditorPanel QPushButton {
                     min-height: 32px;
                     padding: 4px 10px;
@@ -549,10 +613,26 @@ class MainWindow(QMainWindow):
                     min-height: 22px;
                     padding: 0px;
                 }
+                QToolButton#ToolButton {
+                    background: #ffffff;
+                    border: 1px solid #f1d7e6;
+                    border-radius: 10px;
+                    min-width: 32px;
+                    min-height: 28px;
+                    padding: 0px 8px;
+                    color: #b25574;
+                }
                 QScrollArea#EditorScroll { background: transparent; border: none; }
                 QScrollArea#EditorScroll QWidget { background: transparent; }
                 QScrollArea#LayersScroll { background: transparent; border: none; }
                 QScrollArea#LayersScroll QWidget { background: transparent; }
+                QListWidget#PdfPageList { background: transparent; border: none; }
+                QListWidget#PdfPageList::item { color: #8c7484; }
+                QListWidget#PdfPageList::item:selected {
+                    background: #f7ddea;
+                    border: 1px solid #f1d7e6;
+                    border-radius: 10px;
+                }
                 QScrollBar:vertical {
                     background: transparent;
                     width: 8px;
@@ -677,6 +757,7 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, event) -> None:
         self.download_page.update_state(self.state)
+        self.pdf_editor_page.update_state(self.state)
         self.home_page.apply_state(self.state)
         self.state.window_size = [self.width(), self.height()]
         self.state.window_pos = [self.x(), self.y()]

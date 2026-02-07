@@ -8,6 +8,7 @@ PySide6 app that downloads videos with `yt-dlp` + `ffmpeg` and previews them ins
 - `yt-dlp` installed and on your PATH
 - `ffmpeg` installed and on your PATH
 - `PySide6` installed
+- `PyMuPDF` installed
 
 ## Run
 
@@ -17,6 +18,9 @@ python main.py
 
 ## Build (macOS)
 
+Make sure all runtime dependencies are installed in the same Python environment you run `pyinstaller` from
+(PySide6, PyMuPDF, requests, beautifulsoup4, pillow).
+
 ```bash
 pyinstaller --noconfirm --windowed --name "Orca" \
   --add-binary "/path/to/yt-dlp:." \
@@ -25,7 +29,7 @@ pyinstaller --noconfirm --windowed --name "Orca" \
   main.py
 ```
 
-**Note:** Change `/opt/homebrew/bin/` to your actual path where `yt-dlp`, `ffmpeg`, and `ffprobe` are installed.
+**Note:** Replace `/path/to/...` with the actual paths from `which yt-dlp`, `which ffmpeg`, and `which ffprobe`.
 
 ## Notes
 
@@ -34,17 +38,4 @@ pyinstaller --noconfirm --windowed --name "Orca" \
 
 ## Possible Things To Add
 
-1. Embed metadata
-2. Embed thumbnail
-3. Write thumbnail file
-4. Write subtitle files
-5. Subtitle language(s)
-6. Limit download speed
-7. Max retries
-8. Socket timeout
-9. Proxy
-10. Cookies file
-11. User-agent override
-12. Convert/recode output (mp4/mkv/mp3)
-13. Extract audio + bitrate
-14. Trim by time range (start/end)
+See `TODO.md`.

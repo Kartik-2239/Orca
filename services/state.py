@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass, asdict, field
 from pathlib import Path
 from typing import Any
 
@@ -25,6 +25,9 @@ class AppState:
     multi_files_enabled: bool = False
     multi_files_count: int = 5
     audio_dir: str | None = None
+    pdf_open_files: list[str] = field(default_factory=list)
+    last_image_open_dir: str | None = None
+    last_image_export_dir: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

@@ -539,10 +539,11 @@ class ImageEditorPage(QWidget):
             self.on_theme_change("Light")
 
     def _open_image(self) -> None:
+        start_dir = self.state.last_image_open_dir or self.state.last_folder_path
         file_path, _ = QFileDialog.getOpenFileName(
             self,
             "Open Image",
-            self.state.last_folder_path,
+            start_dir,
             "Images (*.png *.jpg *.jpeg *.bmp *.gif *.webp);;All Files (*)",
         )
         if not file_path:
@@ -559,6 +560,8 @@ class ImageEditorPage(QWidget):
         self._base_item.setZValue(0)
         self.scene.addItem(self._base_item)
         self._current_path = path
+        self.state.last_image_open_dir = str(path.parent)
+        self.state.last_folder_path = str(path.parent)
         self._export_base_size = (pixmap.width(), pixmap.height())
         base_rect = self._base_item.mapToScene(self._base_item.boundingRect()).boundingRect()
         self._export_base_rect = QRectF(base_rect)
@@ -1010,7 +1013,8 @@ class ImageEditorPage(QWidget):
             return
         fmt = self.format_combo.currentText()
         filter_text = "PNG Files (*.png)" if fmt == "PNG" else "JPG Files (*.jpg *.jpeg)"
-        file_path, _ = QFileDialog.getSaveFileName(self, "Export", self.state.last_folder_path, filter_text)
+        start_dir = self.state.last_image_export_dir or self.state.last_folder_path
+        file_path, _ = QFileDialog.getSaveFileName(self, "Export", start_dir, filter_text)
         if not file_path:
             return
         self._save_to_path(Path(file_path), fmt)
@@ -1025,6 +1029,8 @@ class ImageEditorPage(QWidget):
         else:
             image.save(str(path), "PNG")
         self._current_path = path
+        self.state.last_image_export_dir = str(path.parent)
+        self.state.last_folder_path = str(path.parent)
 
     def _sync_quality_visibility(self, fmt: str) -> None:
         is_jpg = fmt == "JPG"

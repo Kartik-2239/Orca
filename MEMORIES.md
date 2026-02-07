@@ -1,5 +1,15 @@
 # Memories
 
+## PDF Editor Tabs (Hidden For Now)
+
+The PDF editor still uses `QTabWidget`, but the tab bar is hidden to remove the tab display.
+
+- Hide tabs: `/Users/kartikkannan/Desktop/File/Video-downloader/ui/pdf_editor_page.py` in `_build_ui()`:
+  - `self.tabs.tabBar().hide()`
+- To re-enable tabs later:
+  - Replace with `self.tabs.tabBar().show()` or remove the `hide()` call.
+  - Optional: `self.tabs.setTabsClosable(True)` already wired to close.
+
 ## Export Area (White Background + Dim Overlay)
 
 The image editor renders a white export canvas and dims the non-export area.  

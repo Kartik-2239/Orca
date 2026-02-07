@@ -538,6 +538,10 @@ class DownloadPage(QWidget):
         if "x.com/" in url or "twitter.com/" in url:
             args += ["--socket-timeout", "30", "--retries", "10", "--fragment-retries", "10", "--ignore-errors"]
 
+        ffmpeg_location = self._ffmpeg_location()
+        if ffmpeg_location:
+            args += ["--ffmpeg-location", ffmpeg_location]
+
         args.append(url)
 
         self._set_running(True)
@@ -556,6 +560,17 @@ class DownloadPage(QWidget):
             if bundled.exists():
                 return str(bundled)
         return "yt-dlp"
+
+    def _ffmpeg_location(self) -> str | None:
+        candidates: list[Path] = []
+        if hasattr(sys, "_MEIPASS"):
+            base = Path(getattr(sys, "_MEIPASS"))
+            candidates += [base / "ffmpeg", base / "ffprobe"]
+        candidates += [Path("/opt/homebrew/bin/ffmpeg"), Path("/usr/local/bin/ffmpeg")]
+        for path in candidates:
+            if path.exists():
+                return str(path.parent)
+        return None
 
     def _is_playlist_url(self, url: str) -> bool:
         return "list=" in url
