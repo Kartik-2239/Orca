@@ -12,6 +12,8 @@ from ui.pdf_editor_page import PdfEditorPage
 from ui.video_edits_page import VideoEditsPage
 from ui.generate_docs_page import GenerateDocsPage
 from ui.rename_files_page import RenameFilesPage
+from ui.art_upscale_page import ArtUpscalePage
+from ui.speech_to_text_page import SpeechToTextPage
 from ui.settings_page import SettingsPage
 
 
@@ -50,6 +52,8 @@ class MainWindow(QMainWindow):
         self.video_edits_page = VideoEditsPage(self.state, self.set_theme, self.show_page)
         self.generate_docs_page = GenerateDocsPage(self.state, self.set_theme, self.show_page)
         self.rename_files_page = RenameFilesPage(self.state, self.set_theme, self.show_page)
+        self.art_upscale_page = ArtUpscalePage(self.state, self.set_theme, self.show_page)
+        self.speech_to_text_page = SpeechToTextPage(self.state, self.set_theme, self.show_page)
         self.image_downloader_page = ImageDownloaderPage(self.state, self.set_theme, self.show_page)
         self.settings_page = SettingsPage(self.state, self.set_theme, self.show_page)
 
@@ -60,6 +64,8 @@ class MainWindow(QMainWindow):
         self.stack.addWidget(self.video_edits_page)
         self.stack.addWidget(self.generate_docs_page)
         self.stack.addWidget(self.rename_files_page)
+        self.stack.addWidget(self.art_upscale_page)
+        self.stack.addWidget(self.speech_to_text_page)
         self.stack.addWidget(self.image_downloader_page)
         self.stack.addWidget(self.settings_page)
 
@@ -81,6 +87,10 @@ class MainWindow(QMainWindow):
             self.stack.setCurrentWidget(self.generate_docs_page)
         elif page == "rename_files":
             self.stack.setCurrentWidget(self.rename_files_page)
+        elif page == "art_upscale":
+            self.stack.setCurrentWidget(self.art_upscale_page)
+        elif page == "speech_to_text":
+            self.stack.setCurrentWidget(self.speech_to_text_page)
         elif page == "image_downloader":
             self.stack.setCurrentWidget(self.image_downloader_page)
         elif page == "settings":
@@ -100,6 +110,8 @@ class MainWindow(QMainWindow):
         self.video_edits_page.set_theme(theme)
         self.generate_docs_page.set_theme(theme)
         self.rename_files_page.set_theme(theme)
+        self.art_upscale_page.set_theme(theme)
+        self.speech_to_text_page.set_theme(theme)
         self.settings_page.set_theme(theme)
 
     def apply_theme(self, theme: str) -> None:

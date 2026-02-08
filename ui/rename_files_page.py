@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from pathlib import Path
 import fnmatch
-import re
 
 from PySide6.QtCore import QByteArray, Qt, QSize
 from PySide6.QtGui import QIcon, QPainter, QPixmap, QImage
@@ -15,13 +14,16 @@ from PySide6.QtWidgets import (
     QFileDialog,
     QPushButton,
     QPlainTextEdit,
+    QTableWidget,
+    QTableWidgetItem,
+    QHeaderView,
     QToolButton,
     QVBoxLayout,
     QWidget,
 )
 
 from services.state import AppState
-from services.ai_client import ai_available, generate_rename_rules, RenameRules
+from services.ai_client import ai_available, generate_rename_plan
 
 
 def svg_icon(svg: str, size: int) -> QIcon:
@@ -43,7 +45,6 @@ class RenameFilesPage(QWidget):
         self._folder: Path | None = None
         self._files: list[Path] = []
         self._plan: list[tuple[str, str]] = []
-        self._rules: RenameRules | None = None
         self._ignore_patterns = [
             ".DS_Store",
             ".DS_Store?",
@@ -106,12 +107,12 @@ class RenameFilesPage(QWidget):
         icon_badge.setObjectName("IconBadge")
         header_title = QLabel("Orca")
         header_title.setObjectName("HeaderTitle")
-        home_btn = QPushButton("Home")
-        home_btn.setObjectName("NavButton")
-        home_btn.clicked.connect(lambda: self.on_navigate("home"))
+        self.home_btn = QPushButton("Home")
+        self.home_btn.setObjectName("NavButton")
+        self.home_btn.clicked.connect(lambda: self.on_navigate("home"))
         nav_bar.addWidget(icon_badge)
         nav_bar.addWidget(header_title)
-        nav_bar.addWidget(home_btn)
+        nav_bar.addWidget(self.home_btn)
         nav_bar.addStretch(1)
 
         self.settings_icon_btn = QToolButton()
@@ -168,49 +169,41 @@ class RenameFilesPage(QWidget):
         files_title.setObjectName("SectionLabel")
         left_layout.addWidget(files_title)
 
-        files_row = QHBoxLayout()
-        files_row.setSpacing(12)
-
-        self.files_list = QPlainTextEdit()
-        self.files_list.setReadOnly(True)
-        self.files_list.setPlaceholderText("No folder selected.")
-        self.files_list.setFixedHeight(160)
-        self.files_list.setStyleSheet(
-            "QPlainTextEdit {"
+        self.rename_table = QTableWidget(0, 2)
+        self.rename_table.setHorizontalHeaderLabels(["Current Name", "New Name"])
+        self.rename_table.setEditTriggers(QTableWidget.NoEditTriggers)
+        self.rename_table.setSelectionBehavior(QTableWidget.SelectRows)
+        self.rename_table.setAlternatingRowColors(True)
+        self.rename_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
+        self.rename_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
+        self.rename_table.verticalHeader().setVisible(False)
+        self.rename_table.setStyleSheet(
+            "QTableWidget {"
             " background: #24151e;"
             " color: #e9e1e6;"
             " border: none;"
             " border-radius: 8px;"
-            " padding: 8px;"
+            " gridline-color: #3b2730;"
             "}"
-        )
-        files_row.addWidget(self.files_list, 3)
-
-        self.plan_preview = QPlainTextEdit()
-        self.plan_preview.setReadOnly(True)
-        self.plan_preview.setPlaceholderText("Rename plan will appear here.")
-        self.plan_preview.setFixedHeight(160)
-        self.plan_preview.setStyleSheet(
-            "QPlainTextEdit {"
-            " background: #24151e;"
-            " color: #e9e1e6;"
+            "QHeaderView::section {"
+            " background: #2a1b22;"
+            " color: #b690a5;"
             " border: none;"
-            " border-radius: 8px;"
-            " padding: 8px;"
+            " padding: 6px;"
             "}"
         )
-        files_row.addWidget(self.plan_preview, 2)
-
-        left_layout.addLayout(files_row)
+        self.rename_table.setMinimumHeight(200)
+        left_layout.addWidget(self.rename_table)
 
         right_card = QFrame()
         right_card.setObjectName("OptionsCard")
         right_layout = QVBoxLayout(right_card)
         right_layout.setContentsMargins(16, 16, 16, 16)
-        right_layout.setSpacing(12)
+        right_layout.setSpacing(8)
 
         settings_title = QLabel("Settings")
         settings_title.setObjectName("SectionLabel")
+        settings_title.setFixedHeight(settings_title.sizeHint().height())
         right_layout.addWidget(settings_title)
 
         folder_row = QHBoxLayout()
@@ -229,17 +222,24 @@ class RenameFilesPage(QWidget):
         self.pick_folder_btn.clicked.connect(self._choose_folder)
         right_layout.addWidget(self.pick_folder_btn)
 
+        right_layout.addStretch(1)
+
+        buttons_row = QHBoxLayout()
+        buttons_row.setSpacing(8)
+
         self.generate_btn = QPushButton("Generate Plan")
         self.generate_btn.setObjectName("PrimaryButton")
         self.generate_btn.clicked.connect(self._generate_plan)
         self.generate_btn.setEnabled(False)
-        right_layout.addWidget(self.generate_btn)
+        buttons_row.addWidget(self.generate_btn)
 
         self.apply_btn = QPushButton("Apply Rename")
         self.apply_btn.setObjectName("PrimaryButton")
         self.apply_btn.clicked.connect(self._apply_plan)
         self.apply_btn.setEnabled(False)
-        right_layout.addWidget(self.apply_btn)
+        buttons_row.addWidget(self.apply_btn)
+
+        right_layout.addLayout(buttons_row)
 
         self.status = QLabel("")
         self.status.setObjectName("StatusLabel")
@@ -254,7 +254,6 @@ class RenameFilesPage(QWidget):
         card_layout.addWidget(title)
         card_layout.addWidget(subtitle)
         card_layout.addLayout(layout_row, 1)
-        card_layout.addStretch(1)
 
         root_layout.addWidget(card)
 
@@ -282,13 +281,19 @@ class RenameFilesPage(QWidget):
             for p in self._folder.iterdir()
             if p.is_file() and not self._should_ignore(p)
         ]
-        lines = [p.name for p in self._files]
-        self.files_list.setPlainText("\n".join(lines))
-        self.plan_preview.setPlainText("")
+        self.rename_table.setRowCount(0)
         self._plan = []
         has_files = bool(self._files)
         self.generate_btn.setEnabled(has_files)
         self.apply_btn.setEnabled(False)
+        if not self._files:
+            return
+        self.rename_table.setRowCount(len(self._files))
+        for idx, path in enumerate(self._files):
+            current_item = QTableWidgetItem(path.name)
+            new_item = QTableWidgetItem("")
+            self.rename_table.setItem(idx, 0, current_item)
+            self.rename_table.setItem(idx, 1, new_item)
 
     def _generate_plan(self) -> None:
         if not self._files:
@@ -302,10 +307,18 @@ class RenameFilesPage(QWidget):
             self._set_status("Enter a prompt.", error=True)
             return
         filenames = [p.name for p in self._files]
-        self._rules = generate_rename_rules(prompt, filenames, api_key=self.state.ai_api_key)
-        self._plan = self._build_plan_from_rules(filenames, self._rules)
-        preview_lines = [f"{old}  →  {new}" for old, new in self._plan]
-        self.plan_preview.setPlainText("\n".join(preview_lines))
+        result = generate_rename_plan(prompt, filenames, api_key=self.state.ai_api_key)
+        if len(result.new_names) != len(filenames):
+            self._set_status("AI response was invalid.", error=True)
+            return
+        self._plan = list(zip(filenames, result.new_names))
+        for idx, (old, new) in enumerate(self._plan):
+            current_item = QTableWidgetItem(old)
+            new_item = QTableWidgetItem(new)
+            if old == new:
+                new_item.setForeground(Qt.gray)
+            self.rename_table.setItem(idx, 0, current_item)
+            self.rename_table.setItem(idx, 1, new_item)
         self._set_status("Plan ready.", error=False)
         self.apply_btn.setEnabled(True)
 
@@ -327,78 +340,6 @@ class RenameFilesPage(QWidget):
             src.rename(dst)
         self._load_files()
         self._set_status("Rename complete.", error=False)
-
-    def _build_plan_from_rules(self, filenames: list[str], rules: RenameRules) -> list[tuple[str, str]]:
-        used = set(filenames)
-        plan: list[tuple[str, str]] = []
-        numbering = rules.numbering or {"enabled": False}
-        counter = int(numbering.get("start", 1))
-        padding = int(numbering.get("padding", 2))
-        num_prefix = str(numbering.get("prefix", "") or "")
-        num_suffix = str(numbering.get("suffix", "") or "")
-        skip_if_numbered = bool(numbering.get("skip_if_numbered", True))
-
-        for name in filenames:
-            stem, ext = self._split_name(name)
-            if rules.preserve_extensions:
-                target_ext = ext
-            else:
-                target_ext = rules.extension or ext
-
-            if self._should_skip(stem, rules):
-                new_name = name
-            else:
-                new_stem = stem
-                if rules.replace:
-                    for item in rules.replace:
-                        pattern = item.get("pattern", "")
-                        replacement = item.get("replacement", "")
-                        if pattern:
-                            new_stem = re.sub(pattern, replacement, new_stem)
-                if rules.case == "lower":
-                    new_stem = new_stem.lower()
-                elif rules.case == "upper":
-                    new_stem = new_stem.upper()
-                new_stem = f"{rules.prefix}{new_stem}{rules.suffix}"
-
-                if numbering.get("enabled", False):
-                    if skip_if_numbered and re.match(r"^\\d+", stem):
-                        new_stem = stem
-                    else:
-                        new_stem = f"{num_prefix}{str(counter).zfill(padding)}{num_suffix}"
-                        counter += 1
-
-                new_name = f"{new_stem}{target_ext}"
-            new_name = self._resolve_collision(new_name, used)
-            used.add(new_name)
-            plan.append((name, new_name))
-        return plan
-
-    def _split_name(self, name: str) -> tuple[str, str]:
-        path = Path(name)
-        return path.stem, path.suffix
-
-    def _resolve_collision(self, name: str, used: set[str]) -> str:
-        if name not in used:
-            return name
-        stem, ext = self._split_name(name)
-        index = 2
-        while True:
-            candidate = f"{stem}_{index}{ext}"
-            if candidate not in used:
-                return candidate
-            index += 1
-
-    def _should_skip(self, stem: str, rules: RenameRules) -> bool:
-        if not rules.skip_if_matches:
-            return False
-        for pattern in rules.skip_if_matches:
-            try:
-                if re.search(pattern, stem):
-                    return True
-            except re.error:
-                continue
-        return False
 
     def _should_ignore(self, path: Path) -> bool:
         if not self._folder:

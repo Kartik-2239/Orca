@@ -266,6 +266,7 @@ class HomePage(QWidget):
         self.anime_upscale_btn.setIconSize(QSize(24, 24))
         self.anime_upscale_btn.setText("Art Upscale")
         self.anime_upscale_btn.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.anime_upscale_btn.clicked.connect(lambda: self.on_navigate("art_upscale"))
 
         self.generate_docs_btn = QToolButton()
         self.generate_docs_btn.setObjectName("ActionButton")
@@ -300,7 +301,25 @@ class HomePage(QWidget):
         self.rename_files_btn.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.rename_files_btn.clicked.connect(lambda: self.on_navigate("rename_files"))
 
+        self.speech_to_text_btn = QToolButton()
+        self.speech_to_text_btn.setObjectName("ActionButton")
+        self.speech_to_text_btn.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
+        self.speech_to_text_btn.setIcon(
+            svg_icon(
+                '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#f01d85">'
+                '<path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3Z"/>'
+                '<path d="M5 11a7 7 0 0 0 14 0" fill="#f7c6de"/>'
+                '<path d="M12 18v3m-3 0h6" fill="#f01d85"/></svg>',
+                24,
+            )
+        )
+        self.speech_to_text_btn.setIconSize(QSize(24, 24))
+        self.speech_to_text_btn.setText("Speech to Text")
+        self.speech_to_text_btn.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.speech_to_text_btn.clicked.connect(lambda: self.on_navigate("speech_to_text"))
+
         ai_flow.addWidget(self.anime_upscale_btn)
+        ai_flow.addWidget(self.speech_to_text_btn)
         ai_flow.addWidget(self.generate_docs_btn)
         ai_flow.addWidget(self.rename_files_btn)
         ai_flow.addStretch(1)

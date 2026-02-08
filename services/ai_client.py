@@ -22,16 +22,6 @@ class RenameResult:
     new_names: list[str]
 
 
-@dataclass
-class RenameRules:
-    preserve_extensions: bool = True
-    extension: str = ""
-    case: str = "none"  # "lower", "upper", "none"
-    prefix: str = ""
-    suffix: str = ""
-    replace: list[dict[str, str]] | None = None
-    skip_if_matches: list[str] | None = None
-    numbering: dict[str, object] | None = None
 
 
 def generate_text(prompt: str, count: int, mode: str = "content", api_key: Optional[str] = None) -> AIResult:
@@ -53,11 +43,6 @@ def generate_rename_plan(prompt: str, filenames: list[str], api_key: Optional[st
     return _rename_placeholder(filenames)
 
 
-def generate_rename_rules(prompt: str, filenames: list[str], api_key: Optional[str] = None) -> RenameRules:
-    api_key = (api_key or "").strip()
-    if OpenAI is not None and api_key and filenames:
-        return _rules_with_openai(prompt, filenames, api_key)
-    return RenameRules()
 
 
 def _rename_with_openai(prompt: str, filenames: list[str], api_key: str) -> RenameResult:
@@ -90,36 +75,6 @@ def _rename_with_openai(prompt: str, filenames: list[str], api_key: str) -> Rena
     return _rename_placeholder(filenames)
 
 
-def _rules_with_openai(prompt: str, filenames: list[str], api_key: str) -> RenameRules:
-    client = OpenAI(api_key=api_key, base_url="https://api.groq.com/openai/v1")
-    system = (
-        "You generate rename rules as JSON object only. "
-        "Keys: preserve_extensions (bool), extension (string), case (\"lower\"|\"upper\"|\"none\"), "
-        "prefix (string), suffix (string), replace (list of {pattern, replacement}), "
-        "skip_if_matches (list of regex strings), numbering (object with enabled(bool), start(int), "
-        "padding(int), prefix(string), suffix(string), skip_if_numbered(bool)). "
-        "Return JSON only."
-    )
-    user = (
-        "Create rename rules based on the user request. "
-        f"Request: {prompt}\n"
-        f"Files: {filenames}"
-    )
-    resp = client.chat.completions.create(
-        model="openai/gpt-oss-120b",
-        messages=[
-            {"role": "system", "content": system},
-            {"role": "user", "content": user},
-        ],
-        temperature=0.2,
-    )
-    text = ""
-    if resp and resp.choices:
-        text = resp.choices[0].message.content or ""
-    data = _parse_json_object(text)
-    if isinstance(data, dict):
-        return _coerce_rules(data)
-    return RenameRules()
 
 
 def _rename_placeholder(filenames: list[str]) -> RenameResult:
@@ -245,54 +200,6 @@ def _parse_json_list(text: str) -> list[str]:
     return lines
 
 
-def _parse_json_object(text: str) -> dict | None:
-    try:
-        data = json.loads(text)
-        if isinstance(data, dict):
-            return data
-    except Exception:
-        pass
-    start = text.find("{")
-    end = text.rfind("}")
-    if start != -1 and end != -1 and end > start:
-        snippet = text[start : end + 1]
-        try:
-            data = json.loads(snippet)
-            if isinstance(data, dict):
-                return data
-        except Exception:
-            return None
-    return None
-
-
-def _coerce_rules(data: dict) -> RenameRules:
-    rules = RenameRules()
-    rules.preserve_extensions = bool(data.get("preserve_extensions", rules.preserve_extensions))
-    rules.extension = str(data.get("extension", rules.extension) or "")
-    rules.case = str(data.get("case", rules.case) or "none").lower()
-    rules.prefix = str(data.get("prefix", rules.prefix) or "")
-    rules.suffix = str(data.get("suffix", rules.suffix) or "")
-    replace = data.get("replace")
-    if isinstance(replace, list):
-        cleaned = []
-        for item in replace:
-            if isinstance(item, dict) and "pattern" in item and "replacement" in item:
-                cleaned.append({"pattern": str(item["pattern"]), "replacement": str(item["replacement"])})
-        rules.replace = cleaned or None
-    skip = data.get("skip_if_matches")
-    if isinstance(skip, list):
-        rules.skip_if_matches = [str(item) for item in skip if str(item)]
-    numbering = data.get("numbering")
-    if isinstance(numbering, dict):
-        rules.numbering = {
-            "enabled": bool(numbering.get("enabled", False)),
-            "start": int(numbering.get("start", 1)),
-            "padding": int(numbering.get("padding", 2)),
-            "prefix": str(numbering.get("prefix", "") or ""),
-            "suffix": str(numbering.get("suffix", "") or ""),
-            "skip_if_numbered": bool(numbering.get("skip_if_numbered", True)),
-        }
-    return rules
 
 
 def _stable_seed(prompt: str, mode: str) -> int:

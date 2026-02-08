@@ -60,12 +60,12 @@ class GenerateDocsPage(QWidget):
         icon_badge.setObjectName("IconBadge")
         header_title = QLabel("Orca")
         header_title.setObjectName("HeaderTitle")
-        home_btn = QPushButton("Home")
-        home_btn.setObjectName("NavButton")
-        home_btn.clicked.connect(lambda: self.on_navigate("home"))
+        self.home_btn = QPushButton("Home")
+        self.home_btn.setObjectName("NavButton")
+        self.home_btn.clicked.connect(lambda: self.on_navigate("home"))
         nav_bar.addWidget(icon_badge)
         nav_bar.addWidget(header_title)
-        nav_bar.addWidget(home_btn)
+        nav_bar.addWidget(self.home_btn)
         nav_bar.addStretch(1)
 
         self.settings_icon_btn = QToolButton()
@@ -206,7 +206,6 @@ class GenerateDocsPage(QWidget):
         card_layout.addWidget(title)
         card_layout.addWidget(subtitle)
         card_layout.addLayout(layout_row, 1)
-        card_layout.addStretch(1)
 
         root_layout.addWidget(card)
 
