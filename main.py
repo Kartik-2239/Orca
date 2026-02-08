@@ -191,6 +191,12 @@ class MainWindow(QMainWindow):
                     border-radius: 14px;
                     font-size: 13px;
                 }
+                QFrame[panel="video-left"] QComboBox {
+                    background: transparent;
+                    border: none;
+                    padding: 0px 2px;
+                }
+                QFrame[panel="video-left"] QComboBox::drop-down { border: none; }
                 QComboBox::drop-down { width: 18px; border: 0px; background: transparent; }
                 QComboBox::down-arrow { width: 10px; height: 10px; }
                 QComboBox QAbstractItemView { background: #160e13; color: #e9e1e6; }
@@ -202,6 +208,7 @@ class MainWindow(QMainWindow):
                     border-radius: 14px;
                     font-weight: 600;
                     border: 1px solid #3b2730;
+                    min-height: 43px;
                 }
                 QPushButton#PrimaryButton {
                     background: #5b2138;
@@ -520,6 +527,12 @@ class MainWindow(QMainWindow):
                     border-radius: 14px;
                     font-size: 13px;
                 }
+                QFrame[panel="video-left"] QComboBox {
+                    background: transparent;
+                    border: none;
+                    padding: 0px 2px;
+                }
+                QFrame[panel="video-left"] QComboBox::drop-down { border: none; }
                 QComboBox::drop-down { width: 18px; border: 0px; background: transparent; }
                 QComboBox::down-arrow { width: 10px; height: 10px; }
                 QComboBox QAbstractItemView { background: #ffffff; color: #1f2430; }
@@ -531,6 +544,7 @@ class MainWindow(QMainWindow):
                     border-radius: 14px;
                     font-weight: 600;
                     border: 1px solid #f1d7e6;
+                    min-height: 43px;
                 }
                 QPushButton#PrimaryButton {
                     background: #f01d85;

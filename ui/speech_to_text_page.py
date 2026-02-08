@@ -15,7 +15,6 @@ from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLabel,
-    QLineEdit,
     QFileDialog,
     QPushButton,
     QToolButton,
@@ -23,6 +22,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
     QPlainTextEdit,
+    QScrollArea,
 )
 
 from services.state import AppState
@@ -92,11 +92,6 @@ class SpeechToTextPage(QWidget):
         top_divider.setFixedHeight(1)
         top_divider.setFrameShape(QFrame.HLine)
 
-        title = QLabel("Speech to Text")
-        title.setObjectName("PreviewTitle")
-        subtitle = QLabel("Whisper small transcription to SRT.")
-        subtitle.setObjectName("SubtitleLabel")
-
         self.content_stack = QStackedLayout()
 
         missing_page = QWidget()
@@ -130,6 +125,20 @@ class SpeechToTextPage(QWidget):
         left_layout.setContentsMargins(16, 16, 16, 16)
         left_layout.setSpacing(12)
 
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.NoFrame)
+        scroll.setStyleSheet(
+            "QScrollArea { background: transparent; }"
+            "QScrollArea > QWidget { background: transparent; }"
+            "QScrollArea > QWidget > QWidget { background: transparent; }"
+        )
+
+        scroll_body = QWidget()
+        scroll_layout = QVBoxLayout(scroll_body)
+        scroll_layout.setContentsMargins(4, 4, 4, 4)
+        scroll_layout.setSpacing(14)
+
         header_row = QHBoxLayout()
         source_label = QLabel("Source Media")
         source_label.setObjectName("SectionLabel")
@@ -141,18 +150,21 @@ class SpeechToTextPage(QWidget):
         header_row.addWidget(source_label)
         header_row.addStretch(1)
         header_row.addWidget(self.ready_badge)
-        left_layout.addLayout(header_row)
+        scroll_layout.addLayout(header_row)
 
-        upload_box = QFrame()
-        upload_box.setStyleSheet(
-            "QFrame {"
-            " background: #1b1117;"
+        self.upload_box = QFrame()
+        self.upload_box.setObjectName("UploadBox")
+        self.upload_box.setStyleSheet(
+            "QFrame#UploadBox {"
+            " background: #24151e;"
             " border: 1px dashed #3b2730;"
-            " border-radius: 14px;"
+            " border-radius: 16px;"
             "}"
         )
-        upload_layout = QVBoxLayout(upload_box)
-        upload_layout.setContentsMargins(16, 16, 16, 16)
+        self.upload_box.setCursor(Qt.PointingHandCursor)
+        self.upload_box.mousePressEvent = self._on_upload_clicked
+        upload_layout = QVBoxLayout(self.upload_box)
+        upload_layout.setContentsMargins(18, 18, 18, 18)
         upload_layout.setSpacing(6)
         upload_title = QLabel("Upload new media")
         upload_title.setObjectName("FieldLabel")
@@ -164,52 +176,71 @@ class SpeechToTextPage(QWidget):
         upload_layout.addWidget(upload_title)
         upload_layout.addWidget(upload_hint)
         upload_layout.addStretch(1)
-        left_layout.addWidget(upload_box)
+        scroll_layout.addWidget(self.upload_box)
+
+        choose_row = QHBoxLayout()
+        choose_row.addStretch(1)
+        scroll_layout.addLayout(choose_row)
 
         self.file_card = QFrame()
+        self.file_card.setObjectName("AudioFileCard")
         self.file_card.setStyleSheet(
-            "QFrame { background: #24151e; border: 1px solid #3b2730; border-radius: 12px; }"
+            "QFrame#AudioFileCard { background: #24151e; border: 1px solid #3b2730; border-radius: 14px; }"
         )
-        file_card_layout = QVBoxLayout(self.file_card)
+        file_card_layout = QHBoxLayout(self.file_card)
         file_card_layout.setContentsMargins(12, 10, 12, 10)
-        file_card_layout.setSpacing(4)
+        file_card_layout.setSpacing(10)
+        file_icon = QLabel("FILE")
+        file_icon.setAlignment(Qt.AlignCenter)
+        file_icon.setFixedSize(36, 36)
+        file_icon.setStyleSheet(
+            "QLabel { background: #24151e; border: 1px solid #3b2730; border-radius: 10px;"
+            " color: #8c7484; font-size: 10px; font-weight: 700; }"
+        )
+        file_meta_col = QVBoxLayout()
+        file_meta_col.setSpacing(3)
         self.file_name = QLabel("No file selected")
         self.file_name.setObjectName("FieldLabel")
-        self.file_meta = QLabel("")
+        self.file_meta = QLabel("Select a file to begin.")
         self.file_meta.setObjectName("SubtitleLabel")
-        file_card_layout.addWidget(self.file_name)
-        file_card_layout.addWidget(self.file_meta)
-        left_layout.addWidget(self.file_card)
+        file_meta_col.addWidget(self.file_name)
+        file_meta_col.addWidget(self.file_meta)
+        file_card_layout.addWidget(file_icon)
+        file_card_layout.addLayout(file_meta_col, 1)
+        scroll_layout.addWidget(self.file_card)
 
         model_label = QLabel("Model Settings")
         model_label.setObjectName("SectionLabel")
-        left_layout.addWidget(model_label)
+        scroll_layout.addWidget(model_label)
 
+        engine_label = QLabel("AI Engine")
+        engine_label.setObjectName("FieldLabel")
+        scroll_layout.addWidget(engine_label)
         self.engine_combo = QComboBox()
         self.engine_combo.addItems(["Whisper Small"])
-        left_layout.addWidget(self.engine_combo)
+        self.engine_combo.setStyleSheet(
+            "QComboBox { background: #24151e; color: #e9e1e6; border: 1px solid #3b2730; border-radius: 14px; }"
+        )
+        scroll_layout.addWidget(self.engine_combo)
 
-        self.language_combo = QComboBox()
-        self.language_combo.addItems(["Auto-detect Language", "English", "Spanish", "French", "German"])
-        left_layout.addWidget(self.language_combo)
+        progress_bar = QFrame()
+        progress_bar.setFixedHeight(6)
+        progress_bar.setStyleSheet("QFrame { background: #25161f; border-radius: 3px; }")
+        progress_fill = QFrame(progress_bar)
+        progress_fill.setStyleSheet("QFrame { background: #5b2138; border-radius: 3px; }")
+        progress_fill.setGeometry(0, 0, 140, 6)
 
-        self.denoise_toggle = QCheckBox("Denoise audio input")
-        self.denoise_toggle.setChecked(True)
-        left_layout.addWidget(self.denoise_toggle)
+        scroll_layout.addStretch(1)
+        scroll.setWidget(scroll_body)
+        left_layout.addWidget(scroll, 1)
 
-        self.speaker_toggle = QCheckBox("Speaker identification")
-        self.speaker_toggle.setChecked(False)
-        left_layout.addWidget(self.speaker_toggle)
-
-        left_layout.addStretch(1)
+        self.status = QLabel("")
+        self.status.setObjectName("StatusLabel")
+        self.status.setVisible(False)
+        left_layout.addWidget(self.status)
 
         buttons_row = QHBoxLayout()
-        buttons_row.setSpacing(8)
-
-        self.pick_btn = QPushButton("Choose File")
-        self.pick_btn.setObjectName("ToolButton")
-        self.pick_btn.clicked.connect(self._choose_file)
-        buttons_row.addWidget(self.pick_btn)
+        buttons_row.setSpacing(6)
 
         self.run_btn = QPushButton("Generate")
         self.run_btn.setObjectName("PrimaryButton")
@@ -224,51 +255,70 @@ class SpeechToTextPage(QWidget):
 
         left_layout.addLayout(buttons_row)
 
-        self.status = QLabel("")
-        self.status.setObjectName("StatusLabel")
-        self.status.setVisible(False)
-        left_layout.addWidget(self.status)
-
         right = QFrame()
         right.setObjectName("OptionsCard")
         right_layout = QVBoxLayout(right)
-        right_layout.setContentsMargins(16, 16, 16, 16)
-        right_layout.setSpacing(12)
+        right_layout.setContentsMargins(0, 0, 0, 0)
+        right_layout.setSpacing(0)
 
-        output_label = QLabel("Live Document")
-        output_label.setObjectName("SectionLabel")
-        right_layout.addWidget(output_label)
+        header = QFrame()
+        header.setStyleSheet("QFrame { background: #181014; border-bottom: 1px solid #2d1b24; }")
+        header_layout = QHBoxLayout(header)
+        header_layout.setContentsMargins(16, 10, 16, 10)
+        header_layout.setSpacing(10)
+
+        divider = QFrame()
+        divider.setFixedSize(1, 12)
+        divider.setStyleSheet("background: #2d1b24;")
+
+        output_wrap = QFrame()
+        output_wrap.setStyleSheet("QFrame { background: transparent; }")
+        output_layout = QVBoxLayout(output_wrap)
+        output_layout.setContentsMargins(16, 16, 16, 16)
+        output_layout.setSpacing(12)
+
+        output_card = QFrame()
+        output_card.setStyleSheet(
+            "QFrame { background: #24151e; border: none; border-radius: 14px; }"
+        )
+        output_card_layout = QVBoxLayout(output_card)
+        output_card_layout.setContentsMargins(16, 16, 16, 16)
+        output_card_layout.setSpacing(0)
 
         self.output_text = QPlainTextEdit()
         self.output_text.setReadOnly(True)
         self.output_text.setPlaceholderText("Subtitles will appear here.")
         self.output_text.setStyleSheet(
             "QPlainTextEdit {"
-            " background: #24151e;"
+            " background: transparent;"
             " color: #e9e1e6;"
             " border: none;"
-            " border-radius: 8px;"
-            " padding: 8px;"
+            " border-radius: 12px;"
+            " padding: 0px;"
+            " font-size: 13px;"
             "}"
         )
-        right_layout.addWidget(self.output_text, 1)
+        output_card_layout.addWidget(self.output_text, 1)
+        output_layout.addWidget(output_card, 1)
+        right_layout.addWidget(output_wrap, 1)
 
         main_layout.addWidget(left, 3)
-        main_layout.addWidget(right, 2)
+        main_layout.addWidget(right, 4)
 
         self.content_stack.addWidget(missing_page)
         self.content_stack.addWidget(main_page)
 
         card_layout.addLayout(nav_bar)
         card_layout.addWidget(top_divider)
-        card_layout.addWidget(title)
-        card_layout.addWidget(subtitle)
         card_layout.addLayout(self.content_stack, 1)
         root_layout.addWidget(card)
         self._sync_model_state()
 
     def set_theme(self, theme: str) -> None:
         return
+
+    def _on_upload_clicked(self, event) -> None:
+        self._choose_file()
 
     def _choose_file(self) -> None:
         start_dir = self.state.last_folder_path or ""
@@ -282,7 +332,11 @@ class SpeechToTextPage(QWidget):
             return
         self._input_path = Path(path)
         self.state.last_folder_path = str(self._input_path.parent)
-        self.input_path.setText(str(self._input_path))
+        self.file_name.setText(self._input_path.name)
+        size_bytes = self._input_path.stat().st_size
+        size_mb = size_bytes / (1024 * 1024)
+        ext = self._input_path.suffix.upper().lstrip(".") or "FILE"
+        self.file_meta.setText(f"{ext} • {size_mb:.1f} MB")
 
     def _run_transcription(self) -> None:
         if not self._input_path:

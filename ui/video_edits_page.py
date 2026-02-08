@@ -9,13 +9,17 @@ from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
 from PySide6.QtMultimediaWidgets import QVideoWidget
 from PySide6.QtWidgets import (
+    QCheckBox,
     QComboBox,
     QFrame,
     QHBoxLayout,
     QLabel,
-    QLineEdit,
     QFileDialog,
+    QLineEdit,
     QPushButton,
+    QScrollArea,
+    QSlider,
+    QStackedLayout,
     QTabWidget,
     QToolButton,
     QVBoxLayout,
@@ -37,6 +41,18 @@ def svg_icon(svg: str, size: int) -> QIcon:
 
 
 class VideoEditsPage(QWidget):
+    MAX_NAME_CHARS = 32
+    VIDEO_CODECS = [
+        ("H.264 (libx264)", "libx264", "mp4"),
+        ("H.265 (libx265)", "libx265", "mp4"),
+        ("VP9 (libvpx-vp9)", "libvpx-vp9", "webm"),
+        ("AV1 (libaom-av1)", "libaom-av1", "mkv"),
+    ]
+    AUDIO_CODECS = [
+        ("AAC", "aac"),
+        ("Opus", "libopus"),
+        ("Copy", "copy"),
+    ]
     def __init__(self, state: AppState, on_theme_change, on_navigate) -> None:
         super().__init__()
         self.state = state
@@ -96,26 +112,162 @@ class VideoEditsPage(QWidget):
         top_divider.setFixedHeight(1)
         top_divider.setFrameShape(QFrame.HLine)
 
-        header_row = QHBoxLayout()
-        header_title = QLabel("Video Tools")
-        header_title.setObjectName("PreviewTitle")
-        header_subtitle = QLabel("Fast ffmpeg conversions.")
-        header_subtitle.setObjectName("SubtitleLabel")
-        self.load_video_btn = QPushButton("Load Video")
-        self.load_video_btn.setObjectName("PrimaryButton")
-        self.load_video_btn.clicked.connect(self._open_video)
-        self.close_video_btn = QPushButton("Close")
-        self.close_video_btn.setObjectName("ToolButton")
-        self.close_video_btn.clicked.connect(self._close_video)
-        self.close_video_btn.setVisible(False)
-        header_row.addWidget(header_title)
-        header_row.addStretch(1)
-        header_row.addWidget(header_subtitle)
-        header_row.addWidget(self.load_video_btn)
-        header_row.addWidget(self.close_video_btn)
+        body_layout = QHBoxLayout()
+        body_layout.setSpacing(18)
 
-        top_row = QHBoxLayout()
-        top_row.setSpacing(16)
+        left_panel = QFrame()
+        left_panel.setObjectName("OptionsCard")
+        left_panel.setProperty("panel", "video-left")
+        left_layout = QVBoxLayout(left_panel)
+        left_layout.setContentsMargins(20, 20, 20, 20)
+        left_layout.setSpacing(14)
+
+        source_row = QHBoxLayout()
+        source_label = QLabel("Source Video")
+        source_label.setObjectName("SectionLabel")
+        self.ready_badge = QLabel("READY")
+        self.ready_badge.setStyleSheet(
+            "QLabel { color: #22c55e; background: rgba(34, 197, 94, 0.12);"
+            " padding: 2px 8px; border-radius: 6px; font-size: 10px; font-weight: 700; }"
+        )
+        source_row.addWidget(source_label)
+        source_row.addStretch(1)
+        source_row.addWidget(self.ready_badge)
+        left_layout.addLayout(source_row)
+
+        self.upload_box = QFrame()
+        self.upload_box.setObjectName("UploadBox")
+        self.upload_box.setStyleSheet(
+            "QFrame#UploadBox { background: #140c10; border: 1px dashed #3b2730; border-radius: 16px; }"
+        )
+        self.upload_box.setCursor(Qt.PointingHandCursor)
+        self.upload_box.mousePressEvent = self._on_upload_clicked
+        upload_layout = QVBoxLayout(self.upload_box)
+        upload_layout.setContentsMargins(18, 18, 18, 18)
+        upload_layout.setSpacing(6)
+        upload_icon = QLabel("UPLOAD")
+        upload_icon.setObjectName("FieldLabel")
+        upload_icon.setAlignment(Qt.AlignCenter)
+        upload_title = QLabel("Drag and drop source media")
+        upload_title.setObjectName("FieldLabel")
+        upload_title.setAlignment(Qt.AlignCenter)
+        upload_hint = QLabel("H.264, ProRes, DNxHR, MKV")
+        upload_hint.setObjectName("SubtitleLabel")
+        upload_hint.setAlignment(Qt.AlignCenter)
+        upload_layout.addStretch(1)
+        upload_layout.addWidget(upload_icon)
+        upload_layout.addWidget(upload_title)
+        upload_layout.addWidget(upload_hint)
+        upload_layout.addStretch(1)
+        left_layout.addWidget(self.upload_box)
+
+        self.file_card = QFrame()
+        self.file_card.setObjectName("VideoFileCard")
+        self.file_card.setStyleSheet(
+            "QFrame#VideoFileCard { background: #24151e; border: 1px solid #3b2730; border-radius: 14px; }"
+        )
+        file_card_layout = QHBoxLayout(self.file_card)
+        file_card_layout.setContentsMargins(12, 10, 12, 10)
+        file_card_layout.setSpacing(10)
+        file_icon = QLabel("VID")
+        file_icon.setAlignment(Qt.AlignCenter)
+        file_icon.setFixedSize(36, 36)
+        file_icon.setStyleSheet(
+            "QLabel { background: #130c10; border: none; border-radius: 10px;"
+            " color: #8c7484; font-size: 10px; font-weight: 700; }"
+        )
+        file_meta_col = QVBoxLayout()
+        file_meta_col.setSpacing(3)
+        self.file_name = QLabel("No file selected")
+        self.file_name.setObjectName("FieldLabel")
+        self.file_meta = QLabel("Select a file to begin.")
+        self.file_meta.setObjectName("SubtitleLabel")
+        file_meta_col.addWidget(self.file_name)
+        file_meta_col.addWidget(self.file_meta)
+        file_card_layout.addWidget(file_icon)
+        file_card_layout.addLayout(file_meta_col, 1)
+        left_layout.addWidget(self.file_card)
+
+        encoding_title = QLabel("Encoding Settings")
+        encoding_title.setObjectName("SectionLabel")
+        left_layout.addWidget(encoding_title)
+
+        row = QHBoxLayout()
+        row.setSpacing(10)
+
+        format_col = QVBoxLayout()
+        format_label = QLabel("Output Format")
+        format_label.setObjectName("FieldLabel")
+        self.format_combo = QComboBox()
+        self.format_combo.addItems(["mp4", "mov", "mkv"])
+        format_col.addWidget(format_label)
+        format_col.addWidget(self.format_combo)
+
+        resolution_col = QVBoxLayout()
+        resolution_label = QLabel("Resolution")
+        resolution_label.setObjectName("FieldLabel")
+        self.resize_combo = QComboBox()
+        self.resize_combo.addItems(["Keep", "1920x1080", "1280x720", "854x480", "640x360"])
+        resolution_col.addWidget(resolution_label)
+        resolution_col.addWidget(self.resize_combo)
+
+        row.addLayout(format_col, 1)
+        row.addLayout(resolution_col, 1)
+        left_layout.addLayout(row)
+
+        codec_label = QLabel("Video Codec")
+        codec_label.setObjectName("FieldLabel")
+        left_layout.addWidget(codec_label)
+        self.codec_combo = QComboBox()
+        self.codec_combo.addItems(
+            [
+                "H.264 (libx264)",
+                "H.265 (libx265)",
+                "VP9 (libvpx-vp9)",
+                "AV1 (libaom-av1)",
+                "Copy (stream copy)",
+            ]
+        )
+        left_layout.addWidget(self.codec_combo)
+
+        compression_row = QHBoxLayout()
+        compression_label = QLabel("Compression Strength")
+        compression_label.setObjectName("FieldLabel")
+        self.compression_value = QLabel("")
+        self.compression_value.setObjectName("SubtitleLabel")
+        compression_row.addWidget(compression_label)
+        compression_row.addStretch(1)
+        compression_row.addWidget(self.compression_value)
+        left_layout.addLayout(compression_row)
+
+        self.compression_slider = QSlider(Qt.Horizontal)
+        self.compression_slider.setRange(18, 30)
+        self.compression_slider.setValue(22)
+        self.compression_slider.valueChanged.connect(self._on_compression_changed)
+        left_layout.addWidget(self.compression_slider)
+        self._on_compression_changed(self.compression_slider.value())
+
+        quality_row = QHBoxLayout()
+        quality_row.setSpacing(6)
+        quality_row.addWidget(self._chip_label("Quality"))
+        quality_row.addStretch(1)
+        quality_row.addWidget(self._chip_label("Balanced"))
+        quality_row.addStretch(1)
+        quality_row.addWidget(self._chip_label("File Size"))
+        left_layout.addLayout(quality_row)
+
+        self.hw_accel_toggle = QCheckBox("Hardware Acceleration (NVENC)")
+        self.hw_accel_toggle.setChecked(True)
+        left_layout.addWidget(self.hw_accel_toggle)
+
+        self.metadata_toggle = QCheckBox("Preserve Metadata")
+        self.metadata_toggle.setChecked(False)
+        left_layout.addWidget(self.metadata_toggle)
+
+        left_layout.addStretch(1)
+
+        right_col = QVBoxLayout()
+        right_col.setSpacing(16)
 
         preview_card = QWidget()
         preview_card.setObjectName("PreviewCard")
@@ -127,12 +279,19 @@ class VideoEditsPage(QWidget):
         preview_frame.setObjectName("EditorCanvas")
         preview_frame.setMinimumSize(320, 220)
         preview_frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        preview_frame_layout = QVBoxLayout(preview_frame)
-        preview_frame_layout.setContentsMargins(8, 8, 8, 8)
+
+        self.preview_stack = QStackedLayout(preview_frame)
+        self.preview_stack.setContentsMargins(8, 8, 8, 8)
 
         self.video_widget = QVideoWidget()
         self.video_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        preview_frame_layout.addWidget(self.video_widget)
+        self.preview_label = QLabel("Load a video to preview output.")
+        self.preview_label.setObjectName("PreviewLabel")
+        self.preview_label.setAlignment(Qt.AlignCenter)
+
+        self.preview_stack.addWidget(self.video_widget)
+        self.preview_stack.addWidget(self.preview_label)
+        self.preview_stack.setCurrentWidget(self.preview_label)
 
         self.player = QMediaPlayer(self)
         self.audio_output = QAudioOutput(self)
@@ -140,109 +299,122 @@ class VideoEditsPage(QWidget):
         self.player.setAudioOutput(self.audio_output)
         self.player.setVideoOutput(self.video_widget)
 
-        self.preview_label = QLabel("Load a video to preview output.")
-        self.preview_label.setObjectName("PreviewLabel")
-        self.preview_label.setAlignment(Qt.AlignCenter)
-
         preview_layout.addWidget(preview_frame, 1)
-        preview_layout.addWidget(self.preview_label)
 
-        settings_panel = QFrame()
-        settings_panel.setObjectName("EditorPanel")
-        settings_layout = QVBoxLayout(settings_panel)
-        settings_layout.setContentsMargins(16, 16, 16, 16)
-        settings_layout.setSpacing(12)
+        right_col.addWidget(preview_card, 1)
 
-        self.tabs = QTabWidget()
-
-        format_tab = QWidget()
-        format_layout = QVBoxLayout(format_tab)
-        format_layout.setSpacing(10)
-        format_title = QLabel("Format")
-        format_title.setObjectName("SectionLabel")
-        format_layout.addWidget(format_title)
-        format_hint = QLabel("Change container without re-encoding (fast).")
-        format_hint.setObjectName("SubtitleLabel")
-        format_layout.addWidget(format_hint)
-
-        self.format_combo = QComboBox()
-        self.format_combo.addItems(["mp4", "mov", "mkv", "webm"])
-        format_layout.addWidget(self.format_combo)
-
-        self.remux_btn = QPushButton("Remux")
-        self.remux_btn.setObjectName("PrimaryButton")
-        self.remux_btn.clicked.connect(self._run_remux)
-        format_layout.addWidget(self.remux_btn)
-        format_layout.addStretch(1)
-
-        resize_tab = QWidget()
-        resize_layout = QVBoxLayout(resize_tab)
-        resize_layout.setSpacing(10)
-        resize_title = QLabel("Resolution")
-        resize_title.setObjectName("SectionLabel")
-        resize_layout.addWidget(resize_title)
-        resize_hint = QLabel("Resize with fast preset.")
-        resize_hint.setObjectName("SubtitleLabel")
-        resize_layout.addWidget(resize_hint)
-
-        self.resize_combo = QComboBox()
-        self.resize_combo.addItems(["Keep", "1920x1080", "1280x720", "854x480", "640x360"])
-        resize_layout.addWidget(self.resize_combo)
-
-        self.resize_btn = QPushButton("Resize")
-        self.resize_btn.setObjectName("PrimaryButton")
-        self.resize_btn.clicked.connect(self._run_resize)
-        resize_layout.addWidget(self.resize_btn)
-        resize_layout.addStretch(1)
-
-        compress_tab = QWidget()
-        compress_layout = QVBoxLayout(compress_tab)
-        compress_layout.setSpacing(10)
-        compress_title = QLabel("Compress")
-        compress_title.setObjectName("SectionLabel")
-        compress_layout.addWidget(compress_title)
-        compress_hint = QLabel("Lower file size with CRF.")
-        compress_hint.setObjectName("SubtitleLabel")
-        compress_layout.addWidget(compress_hint)
-
-        self.crf_input = QLineEdit()
-        self.crf_input.setPlaceholderText("CRF (18-30)")
-        self.crf_input.setText("23")
-        compress_layout.addWidget(self.crf_input)
-
-        self.preset_combo = QComboBox()
-        self.preset_combo.addItems(["veryfast", "faster", "fast", "medium"])
-        compress_layout.addWidget(self.preset_combo)
-
-        self.compress_btn = QPushButton("Compress")
-        self.compress_btn.setObjectName("PrimaryButton")
-        self.compress_btn.clicked.connect(self._run_compress)
-        compress_layout.addWidget(self.compress_btn)
-        compress_layout.addStretch(1)
-
-        self.tabs.addTab(format_tab, "Format")
-        self.tabs.addTab(resize_tab, "Resolution")
-        self.tabs.addTab(compress_tab, "Compress")
-
-        settings_layout.addWidget(self.tabs)
+        stats_row = QHBoxLayout()
+        stats_row.setSpacing(12)
+        self.task_value = self._stat_card(stats_row, "CURRENT TASK", "Idle")
+        self.queue_value = self._stat_card(stats_row, "QUEUE SIZE", "0 items")
+        self.time_value = self._stat_card(stats_row, "ESTIMATED TIME", "--:--")
+        right_col.addLayout(stats_row)
 
         self.status = QLabel("")
         self.status.setObjectName("StatusLabel")
         self.status.setVisible(False)
-        settings_layout.addWidget(self.status)
+        right_col.addWidget(self.status)
 
-        top_row.addWidget(preview_card, 3)
-        top_row.addWidget(settings_panel, 2)
+        actions_row = QHBoxLayout()
+        actions_row.setSpacing(8)
+        actions_row.addStretch(1)
+        self.load_video_btn = QPushButton("Load Video")
+        self.load_video_btn.setObjectName("PrimaryButton")
+        self.load_video_btn.clicked.connect(self._open_video)
+        self.close_video_btn = QPushButton("Close")
+        self.close_video_btn.setObjectName("ToolButton")
+        self.close_video_btn.clicked.connect(self._close_video)
+        self.close_video_btn.setVisible(False)
+        self.remux_btn = QPushButton("Remux")
+        self.remux_btn.setObjectName("ToolButton")
+        self.remux_btn.clicked.connect(self._run_remux)
+        self.resize_btn = QPushButton("Resize")
+        self.resize_btn.setObjectName("ToolButton")
+        self.resize_btn.clicked.connect(self._run_resize)
+        self.compress_btn = QPushButton("Compress")
+        self.compress_btn.setObjectName("ToolButton")
+        self.compress_btn.clicked.connect(self._run_compress)
+        actions_row.addWidget(self.load_video_btn)
+        actions_row.addWidget(self.close_video_btn)
+        actions_row.addWidget(self.remux_btn)
+        actions_row.addWidget(self.resize_btn)
+        actions_row.addWidget(self.compress_btn)
+        right_col.addLayout(actions_row)
+
+        left_scroll = QScrollArea()
+        left_scroll.setObjectName("EditorScroll")
+        left_scroll.setWidgetResizable(True)
+        left_scroll.setFrameShape(QFrame.NoFrame)
+        left_scroll.setStyleSheet(
+            "QScrollArea { background: transparent; } "
+            "QScrollArea > QWidget { background: transparent; }"
+        )
+        left_scroll.setWidget(left_panel)
+
+        body_layout.addWidget(left_scroll, 2)
+        body_layout.addLayout(right_col, 3)
 
         card_layout.addLayout(nav_bar)
         card_layout.addWidget(top_divider)
-        card_layout.addLayout(header_row)
-        card_layout.addLayout(top_row, 1)
+        card_layout.addLayout(body_layout, 1)
 
         root_layout.addWidget(card)
 
     def set_theme(self, theme: str) -> None:
         return
+
+    def _chip_label(self, text: str) -> QLabel:
+        label = QLabel(text)
+        label.setObjectName("FieldLabel")
+        return label
+
+    def _stat_card(self, row: QHBoxLayout, title: str, value: str) -> QLabel:
+        card = QFrame()
+        card.setObjectName("ControlsCard")
+        layout = QVBoxLayout(card)
+        layout.setContentsMargins(12, 12, 12, 12)
+        layout.setSpacing(6)
+        title_label = QLabel(title)
+        title_label.setObjectName("SectionLabel")
+        value_label = QLabel(value)
+        value_label.setObjectName("FieldLabel")
+        layout.addWidget(title_label)
+        layout.addWidget(value_label)
+        row.addWidget(card, 1)
+        return value_label
+
+    def _on_upload_clicked(self, _event) -> None:
+        self._open_video()
+
+    def _on_compression_changed(self, value: int) -> None:
+        label = self._compression_label(value)
+        self.compression_value.setText(label)
+
+    def _compression_label(self, value: int) -> str:
+        if value <= 20:
+            strength = "High"
+        elif value <= 23:
+            strength = "Medium"
+        elif value <= 26:
+            strength = "Balanced"
+        else:
+            strength = "Small"
+        return f"{strength} (CRF {value})"
+
+    def _format_bytes(self, value: int) -> str:
+        if value <= 0:
+            return "0 B"
+        units = ["B", "KB", "MB", "GB", "TB"]
+        size = float(value)
+        unit = 0
+        while size >= 1024 and unit < len(units) - 1:
+            size /= 1024.0
+            unit += 1
+        if size >= 100:
+            return f"{size:.0f} {units[unit]}"
+        if size >= 10:
+            return f"{size:.1f} {units[unit]}"
+        return f"{size:.2f} {units[unit]}"
 
     def _open_video(self) -> None:
         start_dir = self.state.last_folder_path or ""
@@ -258,14 +430,17 @@ class VideoEditsPage(QWidget):
         self._video_path = Path(path)
         self.player.setSource(QUrl.fromLocalFile(path))
         self.player.play()
-        self.preview_label.setText("")
+        self.preview_stack.setCurrentWidget(self.video_widget)
+        self.preview_label.setText("Load a video to preview output.")
+        self._set_file_details(self._video_path)
         self.close_video_btn.setVisible(True)
 
     def _close_video(self) -> None:
         self.player.stop()
         self.player.setSource(QUrl())
         self._video_path = None
-        self.preview_label.setText("Load a video to preview output.")
+        self.preview_stack.setCurrentWidget(self.preview_label)
+        self._clear_file_details()
         self.close_video_btn.setVisible(False)
 
     def _run_remux(self) -> None:
@@ -288,6 +463,7 @@ class VideoEditsPage(QWidget):
             "0",
             "-c",
             "copy",
+            *self._metadata_args(),
             str(output),
         ]
         self._run_ffmpeg(args, output)
@@ -300,10 +476,15 @@ class VideoEditsPage(QWidget):
         if target == "Keep":
             self._set_status("Select a resolution.", error=True)
             return
-        output = self._ask_output_path("mp4")
+        video_codec = self._selected_video_codec()
+        if video_codec == "copy":
+            self._set_status("Copy codec cannot be used with resize.", error=True)
+            return
+        output = self._ask_output_path(self.format_combo.currentText())
         if not output:
             return
         width, height = target.split("x", 1)
+        crf = self.compression_slider.value()
         args = [
             "ffmpeg",
             "-y",
@@ -315,15 +496,16 @@ class VideoEditsPage(QWidget):
             "-vf",
             f"scale={width}:{height}",
             "-c:v",
-            "libx264",
+            video_codec,
             "-preset",
-            "veryfast",
+            "fast",
             "-crf",
-            "20",
+            str(crf),
             "-c:a",
             "aac",
             "-b:a",
             "128k",
+            *self._metadata_args(),
             str(output),
         ]
         self._run_ffmpeg(args, output)
@@ -332,9 +514,12 @@ class VideoEditsPage(QWidget):
         if not self._video_path:
             self._set_status("Load a video first.", error=True)
             return
-        crf = self._parse_int(self.crf_input.text(), default=23)
-        preset = self.preset_combo.currentText()
-        output = self._ask_output_path("mp4")
+        crf = self.compression_slider.value()
+        video_codec = self._selected_video_codec()
+        if video_codec == "copy":
+            self._set_status("Copy codec cannot be used with compression.", error=True)
+            return
+        output = self._ask_output_path(self.format_combo.currentText())
         if not output:
             return
         args = [
@@ -346,18 +531,31 @@ class VideoEditsPage(QWidget):
             "-i",
             str(self._video_path),
             "-c:v",
-            "libx264",
+            video_codec,
             "-preset",
-            preset,
+            "fast",
             "-crf",
             str(crf),
             "-c:a",
             "aac",
             "-b:a",
             "128k",
+            *self._metadata_args(),
             str(output),
         ]
         self._run_ffmpeg(args, output)
+
+    def _selected_video_codec(self) -> str:
+        label = self.codec_combo.currentText().strip()
+        if label.startswith("H.265"):
+            return "libx265"
+        if label.startswith("VP9"):
+            return "libvpx-vp9"
+        if label.startswith("AV1"):
+            return "libaom-av1"
+        if label.startswith("Copy"):
+            return "copy"
+        return "libx264"
 
     def _ask_output_path(self, extension: str) -> Path | None:
         if not self._video_path:
@@ -386,6 +584,7 @@ class VideoEditsPage(QWidget):
             return
         self._set_controls_enabled(False)
         self._set_status("Running ffmpeg...", error=False)
+        self.task_value.setText("Encoding")
         self.process.start(args[0], args[1:])
 
     def _on_process_output(self) -> None:
@@ -395,10 +594,12 @@ class VideoEditsPage(QWidget):
 
     def _on_process_error(self) -> None:
         self._set_controls_enabled(True)
+        self.task_value.setText("Idle")
         self._set_status("Failed to start ffmpeg.", error=True)
 
     def _on_process_finished(self, exit_code: int, _status: QProcess.ExitStatus) -> None:
         self._set_controls_enabled(True)
+        self.task_value.setText("Idle")
         if exit_code == 0:
             self._set_status("Done.", error=False)
             if self._last_output_path and self._last_output_path.exists():
@@ -420,8 +621,34 @@ class VideoEditsPage(QWidget):
         color = "#b00020" if error else "#b25574"
         self.status.setStyleSheet(f"color: {color};")
 
-    def _parse_int(self, value: str, default: int) -> int:
+    def _metadata_args(self) -> list[str]:
+        if self.metadata_toggle.isChecked():
+            return ["-map_metadata", "0"]
+        return []
+
+    def _set_file_details(self, path: Path) -> None:
+        self.file_name.setText(self._elide_filename(path.name))
         try:
-            return int(value.strip())
-        except ValueError:
-            return default
+            size = path.stat().st_size
+        except OSError:
+            size = 0
+        size_label = self._format_bytes(size)
+        suffix = path.suffix.upper().lstrip(".") or "VIDEO"
+        self.file_meta.setText(f"{size_label} | {suffix}")
+
+    def _clear_file_details(self) -> None:
+        self.file_name.setText("No file selected")
+        self.file_meta.setText("Select a file to begin.")
+
+    def _elide_filename(self, name: str) -> str:
+        max_len = self.MAX_NAME_CHARS
+        if len(name) <= max_len:
+            return name
+        if "." in name:
+            stem, ext = name.rsplit(".", 1)
+            ext = f".{ext}"
+            available = max_len - len(ext) - 3
+            if available <= 0:
+                return name[: max_len - 3] + "..."
+            return f"{stem[:available]}...{ext}"
+        return name[: max_len - 3] + "..."
